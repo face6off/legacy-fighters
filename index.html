@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#090712" />
+  <meta name="description" content="Legacy Fighters — an original code-drawn arcade fighting game." />
+  <title>Legacy Fighters</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23090712'/%3E%3Cpath d='M12 12h12v30h27v10H12z' fill='%23ffd23f'/%3E%3Cpath d='M30 12h22v10H40v7h10v10H30z' fill='%23ff3d5a'/%3E%3C/svg%3E" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">LF</span><span>LEGACY <b>FIGHTERS</b></span></div>
+      <div class="top-actions">
+        <button id="soundBtn" class="icon-btn" aria-label="Toggle sound">SOUND ON</button>
+        <button id="howBtn" class="icon-btn">CONTROLS</button>
+      </div>
+    </header>
+
+    <section id="selectScreen" class="select-screen">
+      <div class="select-heading">
+        <p class="eyebrow">WORLD COLLISION TOURNAMENT</p>
+        <h1>CHOOSE YOUR LEGACY</h1>
+        <p>Select a fighter. Your rival will be chosen from the remaining roster.</p>
+      </div>
+      <div id="roster" class="roster" aria-label="Fighter roster"></div>
+      <div id="fighterDetail" class="fighter-detail" aria-live="polite"></div>
+      <button id="fightBtn" class="fight-btn">ENTER THE ARENA</button>
+    </section>
+
+    <section id="gameScreen" class="game-screen hidden" aria-label="Legacy Fighters match">
+      <div class="arena-frame">
+        <canvas id="game" width="1280" height="720"></canvas>
+        <div id="roundBanner" class="round-banner"></div>
+        <button id="pauseBtn" class="pause-btn" aria-label="Pause game">Ⅱ</button>
+      </div>
+      <div class="mobile-controls" aria-label="Touch controls">
+        <div class="dpad">
+          <button data-key="a" aria-label="Move left">◀</button>
+          <button data-key="d" aria-label="Move right">▶</button>
+        </div>
+        <div class="action-pad">
+          <button class="block" data-key="h">BLOCK</button>
+          <button class="light" data-key="f">LIGHT</button>
+          <button class="heavy" data-key="g">HEAVY</button>
+          <button class="special" data-key="r">LEGACY</button>
+        </div>
+      </div>
+      <div class="game-footer">
+        <span><kbd>A</kbd><kbd>D</kbd> MOVE</span>
+        <span><kbd>F</kbd> LIGHT</span>
+        <span><kbd>G</kbd> HEAVY</span>
+        <span><kbd>H</kbd> BLOCK</span>
+        <span><kbd>R</kbd> LEGACY MOVE</span>
+      </div>
+    </section>
+  </main>
+
+  <button id="updatesBtn" class="update-log-btn" aria-haspopup="dialog" aria-controls="updatesDialog">
+    <span aria-hidden="true"></span> UPDATE LOG
+  </button>
+
+  <dialog id="controlsDialog">
+    <button id="closeHow" class="dialog-close" aria-label="Close">×</button>
+    <p class="eyebrow">HOW TO FIGHT</p>
+    <h2>CONTROL THE ARENA</h2>
+    <div class="control-grid">
+      <div><kbd>A</kbd><kbd>D</kbd><strong>Move</strong><small>Control your distance</small></div>
+      <div><kbd>F</kbd><strong>Light attack</strong><small>Fast, low stamina cost</small></div>
+      <div><kbd>G</kbd><strong>Heavy attack</strong><small>High damage and stamina cost</small></div>
+      <div><kbd>H</kbd><strong>Block</strong><small>Reduces damage but drains stamina</small></div>
+      <div><kbd>R</kbd><strong>Legacy move</strong><small>Available when the gold meter is full</small></div>
+    </div>
+  </dialog>
+
+  <dialog id="resultDialog" class="result-dialog">
+    <p id="resultKicker" class="eyebrow">BATTLE COMPLETE</p>
+    <h2 id="resultTitle">VICTORY</h2>
+    <p id="resultText"></p>
+    <div class="result-actions">
+      <button id="rematchBtn" class="fight-btn">REMATCH</button>
+      <button id="rosterBtn" class="secondary-btn">CHANGE FIGHTER</button>
+    </div>
+  </dialog>
+
+  <dialog id="updatesDialog" class="updates-dialog" aria-labelledby="updatesTitle">
+    <button id="closeUpdates" class="dialog-close" aria-label="Close update log">×</button>
+    <p class="eyebrow">LEGACY FIGHTERS DEVELOPMENT</p>
+    <h2 id="updatesTitle">UPDATE LOG</h2>
+    <div class="update-list">
+      <article class="update-entry current">
+        <div><span>VERSION 1.01</span><time datetime="2026-09-30">SEPTEMBER 30, 2026</time></div>
+        <h3>THE FIGHTER IDENTITY UPDATE</h3>
+        <p>This update gives the entire game and roster a stronger individual identity:</p>
+        <ul>
+          <li>Expanded the playable roster from 11 to 14 fighters with Beib Medoff, The Warrior and Kayess Hi.</li>
+          <li>Added unique builds, hairstyles, facial hair, gear, colours, statistics and Legacy Moves across the roster.</li>
+          <li>Improved hair and beard detail, including Con McCon’s fuller ginger beard and proportional accessories.</li>
+          <li>Removed unwanted face markings while preserving intentional designs such as The Warrior’s mask and Kayess Hi’s paisley bandana.</li>
+          <li>Added character-based stamina ratings, in-fight stamina bars, attack costs, blocking drain, recovery and guard breaks.</li>
+          <li>Reorganized the 14-fighter selection screen and added this update log.</li>
+        </ul>
+      </article>
+    </div>
+  </dialog>
+
+  <script type="module" src="game.js"></script>
+</body>
+</html>

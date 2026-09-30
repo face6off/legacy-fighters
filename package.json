@@ -1,0 +1,11 @@
+{
+  "name": "legacy-fighters",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs",
+    "build": "node build.mjs",
+    "start": "python -m http.server 8080"
+  }
+}
