@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "legacy-fighters-multiplayer",
+  "main": "server/worker.ts",
+  "compatibility_date": "2026-10-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "rules": [{ "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }],
+  "vars": {
+    "ALLOWED_ORIGINS": "https://face6off.github.io,http://127.0.0.1:8080,http://localhost:8080"
+  },
+  "durable_objects": {
+    "bindings": [{ "name": "ROOMS", "class_name": "MultiplayerRoom" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MultiplayerRoom"] }]
+}

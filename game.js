@@ -1,3 +1,4 @@
+import { multiplayerRequest } from './multiplayer-client.js';
 import { ROSTER, STAGES, ATTACKS, clamp, attackDamage, shouldKnockdown, canStrike, selectCpu, resolveFacingDirection } from './game-data.js';
 import { LEGACY_TOTAL_ROUNDS, createLegacyRun, legacyRewardOptions, applyLegacyReward, buildCounterFighter } from './legacy-mode.js';
 import { CAREER_STAT_KEYS, CAREER_BASE_STAT, CAREER_CREATION_POINTS, CAREER_MAX_STAT, CAREER_HAIR_STYLES, CAREER_BEARD_STYLES, CAREER_BODY_TYPES, xpForNextLevel, createCareerProfile, normalizeCareerProfile, gainCareerXp, spendCareerPoint, nextTournamentMilestone, tournamentAvailable, arenaOpponentLevel, tournamentOpponentLevel, fighterFromCareerProfile, generateCareerOpponent, generateCareerBoss, careerFightXp } from './career-mode.js';
@@ -53,7 +54,7 @@ let gameMode='classic',challengeRound=1,challengeQueue=[],challengePlayerId=null
 const CAREER_STORAGE_KEY='legacyFightersCareerV1',CAREER_SLOT_COUNT=3;
 let activeCareerSlot=1; migrateLegacyCareerSave();
 let careerProfile=loadCareerProfile(),careerRun=null,creatorStats=Object.fromEntries(CAREER_STAT_KEYS.map(key=>[key,CAREER_BASE_STAT]));
-const NETWORK_TICK_MS=40,ROOM_SESSION_KEY='legacyFightersMultiplayerRoom';
+const NETWORK_TICK_MS=40,ROOM_SESSION_KEY='legacyFightersMultiplayerRoom:' + String(window.LEGACY_FIGHTERS_CONFIG?.multiplayerApiUrl || '').trim();
 const network={
   code:null,token:null,role:null,room:null,pollTimer:0,syncPending:false,syncQueued:false,
   nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,
@@ -63,13 +64,13 @@ const network={
 
 const TITLE_LEAD_SECONDS=2;
 const TITLE_TRACKS=[
-  {src:'assets/audio/title-theme.mp3?v=1.7.2',drop:15},
-  {src:'assets/audio/quebec.mp3?v=1.7.2',drop:24.65},
-  {src:'assets/audio/love-scars-2.mp3?v=1.7.2',drop:11.95},
-  {src:'assets/audio/zoom.mp3?v=1.7.2',drop:12.05},
-  {src:'assets/audio/heatin-up.mp3?v=1.7.2',drop:14.75},
-  {src:'assets/audio/whoopty-doo.mp3?v=1.7.2',drop:10.4},
-  {src:'assets/audio/ttg.mp3?v=1.7.2',drop:11.7}
+  {src:'assets/audio/title-theme.mp3?v=1.8.0',drop:15},
+  {src:'assets/audio/quebec.mp3?v=1.8.0',drop:24.65},
+  {src:'assets/audio/love-scars-2.mp3?v=1.8.0',drop:11.95},
+  {src:'assets/audio/zoom.mp3?v=1.8.0',drop:12.05},
+  {src:'assets/audio/heatin-up.mp3?v=1.8.0',drop:14.75},
+  {src:'assets/audio/whoopty-doo.mp3?v=1.8.0',drop:10.4},
+  {src:'assets/audio/ttg.mp3?v=1.8.0',drop:11.7}
 ];
 const INTRO_TRACK_STORAGE_KEY='legacyFightersLastIntroTrackV1';
 let activeIntroTrack=null,activeIntroStart=0,introPlaybackStartedAt=0;
@@ -362,15 +363,10 @@ function updatePing(roundTrip){
 }
 function fighterName(id){return ROSTER.find(fighter=>fighter.id===id)?.name||'NO FIGHTER LOCKED';}
 async function roomRequest(action,payload={}){
-  const response=await fetch(`/api/multiplayer/rooms/${network.code}`,{method:'POST',headers:{'Content-Type':'application/json','x-room-token':network.token||''},body:JSON.stringify({action,...payload})});
-  const data=await response.json().catch(()=>({error:'The multiplayer service returned an invalid response.'}));
-  if(!response.ok)throw new Error(data.error||'The multiplayer room is unavailable.');
-  return data;
+  return multiplayerRequest(`/${network.code}`,{method:'POST',headers:{'Content-Type':'application/json','x-room-token':network.token||''},body:JSON.stringify({action,...payload})});
 }
 async function fetchRoom(){
-  const response=await fetch(`/api/multiplayer/rooms/${network.code}`,{headers:{'x-room-token':network.token||''},cache:'no-store'});
-  const data=await response.json().catch(()=>({error:'The multiplayer service returned an invalid response.'}));
-  if(!response.ok)throw new Error(data.error||'The multiplayer room is unavailable.');
+  const data=await multiplayerRequest(`/${network.code}`,{headers:{'x-room-token':network.token||''}});
   return data.room;
 }
 function renderRoom(room){
@@ -390,8 +386,9 @@ function renderRoom(room){
 }
 function routeRoomState(room){
   renderRoom(room);
+  if(['waiting','selecting'].includes(room.status)&&network.resultShown){network.resultShown=false;if(resultDialog.open)resultDialog.close();showOnly(multiplayerScreen);}
   if(room.status==='fighting'&&room.hostFighter&&room.guestFighter&&room.stageId&&!running){startMultiplayerMatch(room);return;}
-  if(room.status==='finished'&&room.snapshot?.ended&&!network.resultShown){acceptNetworkSnapshot(room.snapshot,room.snapshotSequence);return;}
+  if(room.status==='finished'&&room.snapshot?.ended&&!network.resultShown){startMultiplayerMatch(room);return;}
   if(room.hostReady&&room.guestReady&&room.role==='host'&&!network.stageSelectDismissed&&!running&&!resultDialog.open&&stageScreen.classList.contains('hidden')){showStageSelect();}
 }
 function scheduleRoomPoll(delay=650){
@@ -406,8 +403,7 @@ async function refreshRoom(){
 async function createMultiplayerRoom(){
   networkMessage('CREATING PRIVATE ROOM…');$('#createRoomBtn').disabled=true;
   try{
-    const response=await fetch('/api/multiplayer/rooms',{method:'POST'}),data=await response.json();
-    if(!response.ok)throw new Error(data.error||'Could not create the room.');
+    const data=await multiplayerRequest('',{method:'POST'});
     resetNetworkState();network.code=data.room.code;network.token=data.token;network.role='host';saveRoomSession();renderRoom(data.room);networkMessage('Share this code with your friend.');scheduleRoomPoll(350);
   }catch(error){networkMessage(error.message,true);}finally{$('#createRoomBtn').disabled=false;}
 }
@@ -415,8 +411,7 @@ async function joinMultiplayerRoom(){
   const code=$('#joinCodeInput').value.toUpperCase().replace(/[^A-Z0-9]/g,'').slice(0,6);if(code.length!==6){networkMessage('Enter the full six-character room code.',true);return;}
   networkMessage('JOINING ROOM…');$('#joinRoomBtn').disabled=true;
   try{
-    const response=await fetch(`/api/multiplayer/rooms/${code}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'join'})}),data=await response.json();
-    if(!response.ok)throw new Error(data.error||'Could not join the room.');
+    const data=await multiplayerRequest(`/${code}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'join'})});
     resetNetworkState();network.code=data.room.code;network.token=data.token;network.role='guest';saveRoomSession();renderRoom(data.room);networkMessage('Connected. Choose your fighter.');scheduleRoomPoll(350);
   }catch(error){networkMessage(error.message,true);}finally{$('#joinRoomBtn').disabled=false;}
 }
@@ -604,18 +599,23 @@ async function syncNetwork(force=false){
   finally{network.syncPending=false;if(network.syncQueued){network.syncQueued=false;syncNetwork(true);}}
 }
 function startMultiplayerMatch(room){
-  stopRoomPoll();gameMode='multiplayer';network.room=room;network.resultShown=false;network.targets=null;network.lastSnapshotSequence=0;network.snapshotSequence=0;network.remoteAttackSequence=0;network.nextSyncAt=0;
+  stopRoomPoll();gameMode='multiplayer';network.room=room;network.resultShown=false;network.targets=null;network.lastSnapshotSequence=0;network.snapshotSequence=room.snapshotSequence||0;network.nextSyncAt=0;
+  network.inputSequence=(network.role==='host'?room.hostSequence:room.guestSequence)||0;
+  network.attackSequence=(network.role==='host'?room.hostInput:room.guestInput)?.attackSequence||0;
+  network.remoteAttackSequence=(network.role==='host'?room.guestInput:room.hostInput)?.attackSequence||0;
   const hostData=ROSTER.find(f=>f.id===room.hostFighter),guestData=ROSTER.find(f=>f.id===room.guestFighter),stage=STAGES.find(item=>item.id===room.stageId);
   if(!hostData||!guestData||!stage){networkMessage('The room has invalid match data.',true);showOnly(multiplayerScreen);return;}
   selectedStage=stage;player=new Fighter(hostData,310,1,false);cpu=new Fighter(guestData,970,-1,false);player.remoteControlled=network.role==='guest';cpu.remoteControlled=network.role==='host';
   particles=[];sparks=[];timer=60;startDelay=2.3;running=true;paused=false;last=performance.now();showOnly(gameScreen);if(resultDialog.open)resultDialog.close();$('#pauseBtn').classList.add('hidden');setLegacyControlEnabled(true);
+  if(room.snapshot){applySnapshotFighter(player,room.snapshot.player,1);applySnapshotFighter(cpu,room.snapshot.cpu,1);timer=room.snapshot.timer;startDelay=room.snapshot.startDelay;acceptNetworkSnapshot(room.snapshot,room.snapshotSequence);}
+  if(room.status==='finished'){draw();return;}
   $('#modeBadge').textContent=`ONLINE ROOM ${room.code} · ${network.role.toUpperCase()}`;announce('ONLINE ROUND',850);setTimeout(()=>announce('FIGHT!',650),950);syncNetwork(true);requestAnimationFrame(loop);
 }
 function showMultiplayerResult(winner){
   if(network.resultShown)return;network.resultShown=true;running=false;const localSide=network.role,draw=winner==='draw',won=winner===localSide;
   $('#resultTitle').textContent=draw?'DRAW':won?'VICTORY':'DEFEAT';$('#resultKicker').textContent='ONLINE MATCH COMPLETE';
   $('#resultText').textContent=draw?`${player.data.name} and ${cpu.data.name} finish level.`:winner==='host'?`${player.data.name} defeated ${cpu.data.name}.`:`${cpu.data.name} defeated ${player.data.name}.`;
-  $('#nextRoundBtn').classList.add('hidden');$('#rematchBtn').classList.remove('hidden');$('#rematchBtn').textContent='PLAY AGAIN';$('#rosterBtn').textContent='LEAVE ROOM';setTimeout(()=>{if(!resultDialog.open)resultDialog.showModal();},350);
+  $('#nextRoundBtn').classList.add('hidden');$('#rematchBtn').classList.remove('hidden');$('#rematchBtn').textContent='PLAY AGAIN';$('#rosterBtn').textContent='LEAVE ROOM';setTimeout(()=>{if(network.resultShown&&!resultDialog.open)resultDialog.showModal();},350);scheduleRoomPoll();
 }
 function endMultiplayerHostMatch(){
   if(network.role!=='host')return;const winner=player.health===cpu.health?'draw':player.health>cpu.health?'host':'guest';running=false;network.pendingFinalSnapshot=createNetworkSnapshot(true,winner);showMultiplayerResult(winner);syncNetwork(true);

@@ -12,11 +12,15 @@ import {
 export const dynamic = "force-dynamic";
 
 export async function POST() {
+  return createRoom();
+}
+
+export async function createRoom(makeCode = roomCode) {
   const token = roomToken();
   const tokenHash = await hashToken(token);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
-    const code = roomCode();
+    const code = makeCode();
     const { now, expiresAt } = nowAndExpiry();
     try {
       await db().prepare(`

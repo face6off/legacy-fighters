@@ -72,6 +72,7 @@ export async function POST(request: Request, context: Context) {
   const { now, expiresAt } = nowAndExpiry();
 
   if (action === "selection") {
+    if (!["waiting", "selecting"].includes(room.status)) return json({ error: "Finish or reset the current match first." }, 409);
     const fighter = typeof body.fighter === "string" ? body.fighter : "";
     if (!FIGHTER_IDS.has(fighter)) return json({ error: "Choose a valid fighter." }, 400);
     const fighterColumn = role === "host" ? "host_fighter" : "guest_fighter";
@@ -84,6 +85,7 @@ export async function POST(request: Request, context: Context) {
     `).bind(fighter, now, now, expiresAt, code).run();
   } else if (action === "start") {
     if (role !== "host") return json({ error: "Only the room host can start the fight." }, 403);
+    if (room.status !== "selecting") return json({ error: "This room is not ready to start a new fight." }, 409);
     const stageId = typeof body.stageId === "string" ? body.stageId : "";
     if (!STAGE_IDS.has(stageId)) return json({ error: "Choose a valid arena." }, 400);
     if (!room.host_ready || !room.guest_ready || !room.host_fighter || !room.guest_fighter) {
@@ -97,10 +99,26 @@ export async function POST(request: Request, context: Context) {
       WHERE code = ?
     `).bind(stageId, now, now, expiresAt, code).run();
   } else if (action === "sync") {
+    if (!["fighting", "finished"].includes(room.status)) return json({ error: "The fight has not started." }, 409);
     const input = cleanInput(body.input);
     const inputJson = JSON.stringify(input);
     const sequence = Math.max(0, Math.min(1_000_000_000, Number(body.sequence) || 0));
+    if (!Number.isSafeInteger(sequence) || sequence < 1) return json({ error: "Invalid input sequence." }, 400);
+    if (sequence <= (role === "host" ? room.host_sequence : room.guest_sequence)) return json({ room: publicRoom(room, role) });
     if (role === "host") {
+      if (body.snapshot != null) {
+        const snapshot = body.snapshot as any;
+        const fields = ["x", "vx", "health", "maxHealth", "stamina", "maxStamina", "meter", "stateTime"];
+        if (!snapshot || typeof snapshot !== "object" || !Number.isFinite(snapshot.timer) || !Number.isFinite(snapshot.startDelay)
+          || ![snapshot.player, snapshot.cpu].every(fighter => fighter && typeof fighter.state === "string"
+            && fields.every(field => Number.isFinite(fighter[field]) && Math.abs(fighter[field]) <= 1_000_000))
+          || typeof snapshot.ended !== "boolean" || (snapshot.ended && !["host", "guest", "draw"].includes(snapshot.winner))) {
+          return json({ error: "Invalid match snapshot." }, 400);
+        }
+        if (!Number.isSafeInteger(body.snapshotSequence) || Number(body.snapshotSequence) <= room.snapshot_sequence) {
+          return json({ error: "Snapshot sequence must advance." }, 409);
+        }
+      }
       const snapshotText = body.snapshot == null ? room.snapshot : JSON.stringify(body.snapshot);
       if (snapshotText && snapshotText.length > 16_000) return json({ error: "Network snapshot is too large." }, 413);
       const snapshotSequence = Math.max(room.snapshot_sequence, Math.min(1_000_000_000, Number(body.snapshotSequence) || 0));
@@ -119,6 +137,7 @@ export async function POST(request: Request, context: Context) {
       `).bind(inputJson, sequence, now, now, expiresAt, code).run();
     }
   } else if (action === "reset") {
+    if (room.status !== "finished") return json({ error: "Finish the current fight before requesting a rematch." }, 409);
     await db().prepare(`
       UPDATE multiplayer_rooms
       SET status = 'selecting', host_fighter = NULL, guest_fighter = NULL, stage_id = NULL,

@@ -1,0 +1,71 @@
+name: Verify and publish
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: legacy-fighters-release
+  cancel-in-progress: false
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run check:worker
+
+  deploy:
+    needs: verify
+    # Set this repository variable after creating the Cloudflare account.
+    if: ${{ vars.CLOUDFLARE_ACCOUNT_ID != '' }}
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.pages.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - name: Deploy Cloudflare multiplayer
+        id: worker
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          WRANGLER_SEND_METRICS: 'false'
+        run: |
+          npm run deploy:api | tee /tmp/legacy-fighters-deployment.log
+          node scripts/deployment-url.mjs /tmp/legacy-fighters-deployment.log
+      - name: Verify public API
+        env:
+          MULTIPLAYER_API_URL: ${{ steps.worker.outputs.url }}
+        run: |
+          curl --fail --retry 5 --retry-delay 2 "$MULTIPLAYER_API_URL/health"
+      - name: Package static game with its multiplayer endpoint
+        env:
+          MULTIPLAYER_API_URL: ${{ steps.worker.outputs.url }}
+        run: node scripts/package-site.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/site
+      - name: Publish GitHub Pages
+        id: pages
+        uses: actions/deploy-pages@v4

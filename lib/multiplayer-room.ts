@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { roomDatabase } from "../server/database-context";
 
 export type RoomRole = "host" | "guest";
 
@@ -39,6 +40,8 @@ const ROOM_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const ROOM_LIFETIME_MS = 2 * 60 * 60 * 1000;
 
 export function db() {
+  const local = roomDatabase.getStore();
+  if (local) return local;
   if (!env.DB) throw new Error("Multiplayer database unavailable");
   return env.DB;
 }
