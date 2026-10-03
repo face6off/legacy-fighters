@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.next/
+.wrangler/
+.env*
+.DS_Store
+*.tar.gz
+*.zip

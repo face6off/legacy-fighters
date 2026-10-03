@@ -1,22 +1,14 @@
 # Legacy Fighters
 
-Legacy Fighters is an original, animated 2D browser fighting game built with HTML, CSS, JavaScript, Canvas, and the Web Audio API. Every fighter, visual effect, animation, sound, and game mechanic is produced through code; the project has no game-engine dependency.
+Legacy Fighters is an original browser fighting game with arcade combat, career progression, local modes, and online multiplayer support.
 
-## Features
+## Current version
 
-- 14 selectable parody fighters with unique speed, power, defence, stamina, silhouettes, hairstyles, gear, titles, and Legacy Moves
-- Real-time combat with movement, stamina-limited attacks, blocking, guard breaks, knockback, and specials
-- Character-based stamina capacity and recovery, shown by the cyan in-fight bar
-- CPU opponent with distance management, blocking, attacking, retreat, and stamina conservation behaviour
-- Code-drawn fighter animation, impact particles, screen shake, arena crowd, and HUD
-- Keyboard and mobile touch controls
-- Responsive layout, pause, sound toggle, rematches, and character reselection
-- Bottom-left update log summarizing the game’s development history
-- Small dependency-free automated test suite
+Version 1.7 is in active development.
 
 ## Run locally
 
-Install Python 3, open this folder in a terminal, and run:
+From the repository root:
 
 ```bash
 python -m http.server 8080
@@ -24,44 +16,21 @@ python -m http.server 8080
 
 Then open `http://localhost:8080`.
 
-## Controls
+The browser-only modes run from the static files. Online multiplayer also requires the room API and its database.
 
-| Key | Action |
-| --- | --- |
-| A / D | Move left / right |
-| F | Light attack (low stamina cost) |
-| G | Heavy attack (high stamina cost) |
-| H | Block (drains stamina) |
-| R | Legacy Move when the gold meter is full |
-| Escape | Pause |
+## Main files
 
-## Tests
+- `index.html` — game entry point
+- `styles.css` — interface and arena styling
+- `game.js` — combat, menus, audio, and multiplayer client
+- `game-data.js` — characters, stages, and shared game data
+- `legacy-mode.js` — Start Your Legacy mode
+- `career-mode.js` — career mode logic
+- `assets/` — game logo, stage artwork, and soundtrack files
+- `app/api/multiplayer/` — multiplayer room API source
+- `lib/multiplayer-room.ts` — multiplayer room synchronization
+- `db/` and `drizzle/` — database schema and migrations
 
-```bash
-npm test
-```
+## Notes
 
-## Portfolio notes
-
-The roster uses original parody identities and code-drawn designs. No celebrity photographs, voices, logos, official costumes, or copied game assets are included. Before commercial distribution, obtain professional advice regarding the final title, characters, publicity rights, and trademarks.
-
-## Technology
-
-- Semantic HTML5
-- Responsive CSS
-- JavaScript ES modules
-- Canvas 2D API
-- Web Audio API
-- Node.js built-in test assertions
-
-## Roadmap
-
-- Local two-player mode
-- Character-specific animation rigs
-- Best-of-three rounds and difficulty settings
-- Additional arenas, combos, accessibility options, and gamepad support
-- Packaged desktop build
-
-## License
-
-Source code is provided for portfolio and educational use. Character concepts and the Legacy Fighters identity remain original project material.
+Large media files are included because they are used directly by the game. Keep rights and distribution permissions in mind when adding new soundtrack material.

@@ -4,61 +4,251 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <meta name="theme-color" content="#090712" />
-  <meta name="description" content="Legacy Fighters — an original code-drawn arcade fighting game." />
+  <meta name="description" content="Legacy Fighters — an original arcade fighting game with sixteen parody fighters and ten cinematic arenas." />
   <title>Legacy Fighters</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23090712'/%3E%3Cpath d='M12 12h12v30h27v10H12z' fill='%23ffd23f'/%3E%3Cpath d='M30 12h22v10H40v7h10v10H30z' fill='%23ff3d5a'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="styles.css?v=1.7.2" />
 </head>
-<body>
-  <main class="shell">
+<body class="intro-pending">
+  <div id="introGate" class="intro-gate" role="dialog" aria-modal="true" aria-label="Enter Legacy Fighters">
+    <div class="intro-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
+    <div class="intro-prompt">
+      <img class="game-title-logo intro-logo" src="assets/legacy-fighters-logo.png?v=1.7.2" alt="Legacy Fighters" />
+      <button id="enterGameBtn" class="intro-enter">CLICK TO ENTER</button>
+    </div>
+  </div>
+
+  <main id="gameShell" class="shell intro-hidden">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">LF</span><span>LEGACY <b>FIGHTERS</b></span></div>
+      <button id="homeBtn" class="brand home-brand" aria-label="Return to main menu"><img class="header-brand-logo" src="assets/legacy-fighters-logo.png?v=1.7.2" alt="Legacy Fighters" /></button>
       <div class="top-actions">
         <button id="soundBtn" class="icon-btn" aria-label="Toggle sound">SOUND ON</button>
         <button id="howBtn" class="icon-btn">CONTROLS</button>
+        <button id="settingsTopBtn" class="icon-btn">SETTINGS</button>
       </div>
     </header>
 
-    <section id="selectScreen" class="select-screen">
+    <section id="startScreen" class="start-screen" aria-labelledby="gameTitle">
+      <img class="game-title-logo start-logo" src="assets/legacy-fighters-logo.png?v=1.7.2" alt="" aria-hidden="true" />
+      <h1 id="gameTitle" class="sr-only">LEGACY FIGHTERS</h1>
+      <p class="start-version">VERSION 1.7</p>
+      <div class="start-actions">
+        <button id="playBtn" class="fight-btn">PLAY</button>
+        <button id="settingsBtn" class="secondary-btn">SETTINGS</button>
+      </div>
+    </section>
+
+    <section id="modeScreen" class="mode-screen hidden" aria-labelledby="modeTitle">
       <div class="select-heading">
-        <p class="eyebrow">WORLD COLLISION TOURNAMENT</p>
+        <p class="eyebrow">SELECT A GAMEMODE</p>
+        <h1 id="modeTitle">HOW WILL YOU FIGHT?</h1>
+      </div>
+      <div class="mode-grid">
+        <button class="mode-card" data-mode="classic">
+          <span class="mode-number">01</span><strong>CLASSIC MATCH</strong>
+          <small>Choose your fighter and stage for a single battle.</small>
+        </button>
+        <button class="mode-card challenge" data-mode="challenge">
+          <span class="mode-number">∞</span><strong>CHALLENGE MODE</strong>
+          <small>Defeat the roster one round at a time as the CPU grows stronger.</small>
+        </button>
+        <button class="mode-card legacy" data-mode="legacy">
+          <span class="mode-number">05</span><strong>LEGACY MODE</strong>
+          <small>Inherit a defeated rival’s skills after each win, then survive a final opponent designed to counter your build.</small>
+        </button>
+        <button class="mode-card multiplayer" data-mode="multiplayer">
+          <span class="mode-number">VS</span><strong>MULTIPLAYER</strong>
+          <small>Create a private online room, share its code and fight a friend in a synchronized match.</small>
+        </button>
+        <button class="mode-card career" data-mode="career">
+          <span class="mode-number">XP</span><strong>START YOUR LEGACY</strong>
+          <small>Create your own fighter, train in the Dojo, and earn XP in the Arena or Tournament.</small>
+        </button>
+      </div>
+      <button id="modeBackBtn" class="secondary-btn">BACK</button>
+    </section>
+
+    <section id="multiplayerScreen" class="multiplayer-screen hidden" aria-labelledby="multiplayerTitle">
+      <div class="select-heading">
+        <p class="eyebrow">PRIVATE ONLINE MATCH</p>
+        <h1 id="multiplayerTitle">MULTIPLAYER</h1>
+        <p>Create a room or enter your friend’s six-character room code.</p>
+      </div>
+
+      <div class="multiplayer-shell">
+        <div id="multiplayerSetup" class="multiplayer-setup">
+          <button id="createRoomBtn" class="fight-btn">CREATE ROOM</button>
+          <span class="lobby-divider">OR</span>
+          <div class="join-room">
+            <label for="joinCodeInput">ROOM CODE</label>
+            <input id="joinCodeInput" type="text" maxlength="6" inputmode="text" autocomplete="off" spellcheck="false" placeholder="ABC123" />
+            <button id="joinRoomBtn" class="secondary-btn">JOIN ROOM</button>
+          </div>
+        </div>
+
+        <div id="multiplayerRoomPanel" class="multiplayer-room hidden">
+          <div class="room-code-block">
+            <span>ROOM CODE</span>
+            <strong id="roomCodeDisplay">------</strong>
+            <button id="copyRoomCodeBtn" class="text-btn">COPY CODE</button>
+          </div>
+          <div id="networkStatus" class="network-status connecting"><i></i><span>CONNECTING</span></div>
+          <div class="online-slots">
+            <article id="hostSlot" class="online-slot">
+              <span>PLAYER 1 · HOST</span>
+              <strong id="hostSlotStatus">CONNECTED</strong>
+              <small id="hostFighterStatus">CHOOSING FIGHTER</small>
+            </article>
+            <b class="online-versus">VS</b>
+            <article id="guestSlot" class="online-slot waiting">
+              <span>PLAYER 2 · GUEST</span>
+              <strong id="guestSlotStatus">WAITING FOR PLAYER</strong>
+              <small id="guestFighterStatus">NO FIGHTER LOCKED</small>
+            </article>
+          </div>
+          <button id="multiplayerPrimaryBtn" class="fight-btn" disabled>WAITING FOR OPPONENT</button>
+          <button id="leaveRoomBtn" class="secondary-btn">LEAVE ROOM</button>
+        </div>
+        <p id="multiplayerMessage" class="multiplayer-message" role="status" aria-live="polite"></p>
+      </div>
+      <button id="multiplayerBackBtn" class="secondary-btn">BACK TO MODES</button>
+    </section>
+
+    <section id="careerSlotsScreen" class="career-screen career-slots-screen hidden" aria-labelledby="careerSlotsTitle">
+      <div class="select-heading">
+        <p class="eyebrow">START YOUR LEGACY</p>
+        <h1 id="careerSlotsTitle">CHOOSE A SAVE</h1>
+        <p>Choose one of three separate fighter careers.</p>
+      </div>
+      <div id="careerSaveSlots" class="career-save-slots"></div>
+      <div class="career-screen-actions"><button id="careerSlotsBackBtn" class="secondary-btn">BACK TO MODES</button></div>
+    </section>
+
+    <section id="careerCreatorScreen" class="career-screen hidden" aria-labelledby="careerCreatorTitle">
+      <div class="select-heading">
+        <p class="eyebrow">START YOUR LEGACY</p>
+        <h1 id="careerCreatorTitle">CREATE YOUR FIGHTER</h1>
+        <p>Choose a look, then distribute all 10 bonus points. Every stat begins at 25.</p>
+      </div>
+      <div class="creator-layout">
+        <article class="creator-preview-panel">
+          <div id="careerCreatorPortrait" class="career-portrait fighter-card look-crew beard-none gear-fightgloves" aria-label="Created fighter preview">
+            <span class="portrait" aria-hidden="true"><i class="portrait-hair"></i><i class="portrait-beard"></i><i class="portrait-moustache"></i><i class="portrait-accessory"></i><i class="portrait-belt"></i><i class="portrait-gear portrait-gear-left"></i><i class="portrait-gear portrait-gear-right"></i></span>
+            <span class="card-shade"></span><span class="card-info"><span>LEVEL 1 PROSPECT</span><strong id="careerPreviewName">LEGACY ROOKIE</strong></span>
+          </div>
+        </article>
+        <div class="creator-controls">
+          <section class="creator-panel">
+            <h2>APPEARANCE</h2>
+            <div class="creator-fields">
+              <label class="wide-field"><span>Fighter name</span><input id="careerNameInput" type="text" maxlength="20" value="Legacy Rookie" /></label>
+              <label><span>Hair</span><select id="careerHairSelect"></select></label>
+              <label><span>Facial hair</span><select id="careerBeardSelect"></select></label>
+              <label><span>Body type</span><select id="careerBodySelect"></select></label>
+              <label><span>Height <output id="careerHeightValue">178 cm</output></span><input id="careerHeightInput" type="range" min="160" max="205" value="178" /></label>
+              <label><span>Weight <output id="careerWeightValue">185 lb</output></span><input id="careerWeightInput" type="range" min="130" max="300" value="185" /></label>
+            </div>
+            <div class="creator-colors">
+              <label><span>Skin</span><input id="careerSkinColor" type="color" value="#b97a56" /></label>
+              <label><span>Hair</span><input id="careerHairColor" type="color" value="#241914" /></label>
+              <label><span>Outfit</span><input id="careerOutfitColor" type="color" value="#3a52b8" /></label>
+              <label><span>Accent</span><input id="careerAccentColor" type="color" value="#ffd23f" /></label>
+            </div>
+          </section>
+          <section class="creator-panel">
+            <div class="creator-panel-heading"><h2>STARTING STATS</h2><strong><span id="careerCreationPoints">10</span> POINTS LEFT</strong></div>
+            <div id="careerCreationStats" class="career-stat-editor"></div>
+          </section>
+        </div>
+      </div>
+      <p id="careerCreatorMessage" class="career-message" role="status"></p>
+      <div class="career-screen-actions"><button id="careerCreatorBackBtn" class="secondary-btn">BACK TO SAVES</button><button id="createCareerFighterBtn" class="fight-btn">BEGIN AT LEVEL 1</button></div>
+    </section>
+
+    <section id="careerHubScreen" class="career-screen hidden" aria-labelledby="careerHubTitle">
+      <div class="select-heading career-hub-heading">
+        <p class="eyebrow">START YOUR LEGACY</p>
+        <h1 id="careerHubTitle">FIGHTER HQ</h1>
+        <p>Train, compete and spend earned skill points to build your fighter.</p>
+      </div>
+      <div class="career-dashboard">
+        <article class="career-profile-panel">
+          <div id="careerHubPortrait" class="career-portrait fighter-card" aria-label="Career fighter">
+            <span class="portrait" aria-hidden="true"><i class="portrait-hair"></i><i class="portrait-beard"></i><i class="portrait-moustache"></i><i class="portrait-accessory"></i><i class="portrait-belt"></i><i class="portrait-gear portrait-gear-left"></i><i class="portrait-gear portrait-gear-right"></i></span>
+            <span class="card-shade"></span><span class="card-info"><span id="careerHubLevel">LEVEL 1</span><strong id="careerHubName">LEGACY ROOKIE</strong></span>
+          </div>
+          <div class="career-xp-block"><div><strong id="careerLevelLabel">LEVEL 1</strong><span id="careerXpLabel">0 / 100 XP</span></div><div class="career-xp-bar"><i id="careerXpFill"></i></div></div>
+          <div class="career-measurements"><span id="careerHeightLabel">178 CM</span><span id="careerWeightLabel">185 LB</span></div>
+        </article>
+        <section class="career-training-panel">
+          <div class="creator-panel-heading"><h2>ATTRIBUTES</h2><strong><span id="careerSkillPoints">0</span> SKILL POINTS</strong></div>
+          <div id="careerUpgradeStats" class="career-stat-editor"></div>
+        </section>
+      </div>
+      <div class="career-activity-grid">
+        <button class="career-activity dojo" data-career-activity="dojo"><span>NO XP</span><strong>THE DOJO</strong><small>Practice against a generated sparring partner inside The Octagon.</small></button>
+        <button class="career-activity arena" data-career-activity="arena"><span>EARN XP</span><strong>THE ARENA</strong><small>Fight level-matched generated opponents beneath the Toronto skyline.</small></button>
+        <button id="careerTournamentBtn" class="career-activity tournament" data-career-activity="tournament"><span id="careerTournamentStatus">UNLOCKS AT LEVEL 5</span><strong>TOURNAMENT</strong><small>Defeat three higher-level opponents, then face a Legacy-enabled roster boss for 2.5× XP.</small></button>
+      </div>
+      <div class="career-screen-actions"><button id="careerHubBackBtn" class="secondary-btn">BACK TO SAVES</button></div>
+    </section>
+
+    <section id="selectScreen" class="select-screen hidden">
+      <div class="select-heading">
         <h1>CHOOSE YOUR LEGACY</h1>
-        <p>Select a fighter. Your rival will be chosen from the remaining roster.</p>
+        <p id="selectHint">Select a fighter. Your rival will be chosen from the remaining roster.</p>
       </div>
       <div id="roster" class="roster" aria-label="Fighter roster"></div>
       <div id="fighterDetail" class="fighter-detail" aria-live="polite"></div>
-      <button id="fightBtn" class="fight-btn">ENTER THE ARENA</button>
+      <div class="select-actions"><button id="selectBackBtn" class="secondary-btn">BACK TO MODES</button><button id="fightBtn" class="fight-btn">ENTER THE ARENA</button></div>
+    </section>
+
+    <section id="stageScreen" class="stage-screen hidden" aria-labelledby="stageTitle">
+      <div class="select-heading">
+        <p class="eyebrow">CHOOSE THE BATTLEGROUND</p>
+        <h1 id="stageTitle">STAGE SELECT</h1>
+        <p>Every arena has its own atmosphere. Choose where the next legacy will be made.</p>
+      </div>
+      <div id="stageGrid" class="stage-grid" aria-label="Fight stages"></div>
+      <div class="stage-actions">
+        <button id="stageBackBtn" class="secondary-btn">BACK TO FIGHTERS</button>
+        <button id="stageFightBtn" class="fight-btn">FIGHT HERE</button>
+      </div>
     </section>
 
     <section id="gameScreen" class="game-screen hidden" aria-label="Legacy Fighters match">
       <div class="arena-frame">
         <canvas id="game" width="1280" height="720"></canvas>
         <div id="roundBanner" class="round-banner"></div>
+        <div id="modeBadge" class="mode-badge" aria-live="polite"></div>
+        <div id="pingCounter" class="ping-counter hidden" aria-live="polite">PING -- MS</div>
         <button id="pauseBtn" class="pause-btn" aria-label="Pause game">Ⅱ</button>
+        <div id="pauseMenu" class="pause-menu hidden" role="dialog" aria-modal="true" aria-label="Pause menu">
+          <strong>PAUSED</strong>
+          <button id="resumeGameBtn" class="fight-btn">RESUME</button>
+          <button id="leaveGameBtn" class="secondary-btn">LEAVE GAME</button>
+        </div>
       </div>
       <div class="mobile-controls" aria-label="Touch controls">
         <div class="dpad">
-          <button data-key="a" aria-label="Move left">◀</button>
-          <button data-key="d" aria-label="Move right">▶</button>
+          <button data-action="left" aria-label="Move left">◀</button>
+          <button data-action="right" aria-label="Move right">▶</button>
         </div>
         <div class="action-pad">
-          <button class="block" data-key="h">BLOCK</button>
-          <button class="light" data-key="f">LIGHT</button>
-          <button class="heavy" data-key="g">HEAVY</button>
-          <button class="special" data-key="r">LEGACY</button>
+          <button class="block" data-action="block">BLOCK</button>
+          <button class="shove" data-action="shove">SHOVE</button>
+          <button class="light" data-action="jab">JAB</button>
+          <button class="heavy" data-action="cross">POWER</button>
+          <button class="kick" data-action="kick">KICK</button>
+          <button class="heavy-kick" data-action="heavyKick">H. KICK</button>
+          <button class="special" data-action="special">LEGACY</button>
         </div>
       </div>
-      <div class="game-footer">
-        <span><kbd>A</kbd><kbd>D</kbd> MOVE</span>
-        <span><kbd>F</kbd> LIGHT</span>
-        <span><kbd>G</kbd> HEAVY</span>
-        <span><kbd>H</kbd> BLOCK</span>
-        <span><kbd>R</kbd> LEGACY MOVE</span>
-      </div>
+      <div id="gameFooter" class="game-footer"></div>
     </section>
   </main>
 
-  <button id="updatesBtn" class="update-log-btn" aria-haspopup="dialog" aria-controls="updatesDialog">
+  <button id="updatesBtn" class="update-log-btn intro-hidden" aria-haspopup="dialog" aria-controls="updatesDialog">
     <span aria-hidden="true"></span> UPDATE LOG
   </button>
 
@@ -66,12 +256,30 @@
     <button id="closeHow" class="dialog-close" aria-label="Close">×</button>
     <p class="eyebrow">HOW TO FIGHT</p>
     <h2>CONTROL THE ARENA</h2>
-    <div class="control-grid">
-      <div><kbd>A</kbd><kbd>D</kbd><strong>Move</strong><small>Control your distance</small></div>
-      <div><kbd>F</kbd><strong>Light attack</strong><small>Fast, low stamina cost</small></div>
-      <div><kbd>G</kbd><strong>Heavy attack</strong><small>High damage and stamina cost</small></div>
-      <div><kbd>H</kbd><strong>Block</strong><small>Reduces damage but drains stamina</small></div>
-      <div><kbd>R</kbd><strong>Legacy move</strong><small>Available when the gold meter is full</small></div>
+    <div id="controlGrid" class="control-grid"></div>
+  </dialog>
+
+  <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
+    <button id="closeSettings" class="dialog-close" aria-label="Close settings">×</button>
+    <p class="eyebrow">GAME OPTIONS</p>
+    <h2 id="settingsTitle">SETTINGS</h2>
+    <div class="settings-sections">
+      <section>
+        <h3>AUDIO</h3>
+        <label class="range-setting"><span>Master volume <output id="masterVolumeValue">80%</output></span><input id="masterVolume" type="range" min="0" max="100" step="1" /></label>
+        <label class="range-setting"><span>Music volume <output id="musicVolumeValue">65%</output></span><input id="musicVolume" type="range" min="0" max="100" step="1" /></label>
+        <label class="range-setting"><span>Effects volume <output id="effectsVolumeValue">85%</output></span><input id="effectsVolume" type="range" min="0" max="100" step="1" /></label>
+      </section>
+      <section>
+        <h3>DISPLAY &amp; MOTION</h3>
+        <label class="range-setting"><span>Screen shake <output id="screenShakeValue">80%</output></span><input id="screenShake" type="range" min="0" max="100" step="1" /></label>
+        <label class="toggle-setting"><span><strong>Fluid motion</strong><small>Idle movement, walking sway and impact rotation</small></span><input id="fluidMotion" type="checkbox" /></label>
+      </section>
+      <section>
+        <div class="settings-heading"><h3>KEYBINDS</h3><button id="resetKeysBtn" class="text-btn">RESET DEFAULTS</button></div>
+        <p class="settings-help">Select a control, then press the key you want to use.</p>
+        <div id="keybindGrid" class="keybind-grid"></div>
+      </section>
     </div>
   </dialog>
 
@@ -81,8 +289,30 @@
     <p id="resultText"></p>
     <div class="result-actions">
       <button id="rematchBtn" class="fight-btn">REMATCH</button>
+      <button id="nextRoundBtn" class="fight-btn hidden">NEXT ROUND</button>
       <button id="rosterBtn" class="secondary-btn">CHANGE FIGHTER</button>
     </div>
+  </dialog>
+
+  <dialog id="leaveMatchDialog" class="confirm-dialog" aria-labelledby="leaveMatchTitle">
+    <p class="eyebrow">LEAVE CURRENT FIGHT?</p>
+    <h2 id="leaveMatchTitle">ARE YOU SURE?</h2>
+    <p>Your current fight will end. Saved Start Your Legacy progress will remain safe.</p>
+    <div class="result-actions">
+      <button id="confirmLeaveMatchBtn" class="fight-btn">YES, LEAVE</button>
+      <button id="cancelLeaveMatchBtn" class="secondary-btn">KEEP FIGHTING</button>
+    </div>
+  </dialog>
+
+  <dialog id="legacyRewardDialog" class="legacy-reward-dialog" aria-labelledby="legacyRewardTitle">
+    <p class="eyebrow">VICTORY REWARD</p>
+    <h2 id="legacyRewardTitle">INHERIT A LEGACY</h2>
+    <p id="legacyRewardLead" class="legacy-reward-lead"></p>
+    <div id="legacyRewardGrid" class="legacy-reward-grid"></div>
+    <section class="legacy-build-panel">
+      <h3>CURRENT LEGACY BUILD</h3>
+      <ul id="legacyBuild" class="legacy-build"></ul>
+    </section>
   </dialog>
 
   <dialog id="updatesDialog" class="updates-dialog" aria-labelledby="updatesTitle">
@@ -91,14 +321,146 @@
     <h2 id="updatesTitle">UPDATE LOG</h2>
     <div class="update-list">
       <article class="update-entry current">
-        <div><span>VERSION 1.01</span><time datetime="2026-09-30">SEPTEMBER 30, 2026</time></div>
+        <div><span>VERSION 1.7</span></div>
+        <h3>COMBAT &amp; ONLINE REFINEMENT</h3>
+        <ul>
+          <li>Bug fixes.</li>
+          <li>Added a shove control designed to break up overlapping fighters and restore fair close-range combat.</li>
+          <li>Reduced avoidable multiplayer input delay, improved guest-side action prediction and added a live ping counter.</li>
+          <li>Rebuilt Legacy Move presentation with longer, clearer and more deliberate multi-stage animations.</li>
+          <li>Added three independent Start Your Legacy save files.</li>
+          <li>Added clearer back navigation and a confirmed leave-fight option inside the pause menu.</li>
+          <li>Expanded the roster with two new fighters and distinct visual identities.</li>
+          <li>Refined the Legacy Fighters logo to match the game’s established gold, coral-red and dark-purple arcade identity.</li>
+          <li>Randomized the opening soundtrack across every available song. Each intro begins two seconds before its first beat drop and reveals the start menu exactly on the drop.</li>
+          <li>Added two new soundtracks to the game’s music rotation.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.6</span></div>
+        <h3>START YOUR LEGACY</h3>
+        <ul>
+          <li>Added a persistent career mode with fighter creation, 100-point attributes, XP, levels and five skill points earned per level.</li>
+          <li>Added customizable existing hairstyles and body builds, adjustable height and weight, facial hair, and unrestricted colour selection.</li>
+          <li>Added Dojo practice in The Octagon and level-matched Arena fights on the Toronto Skyline.</li>
+          <li>Added tournaments every five levels with three elevated opponents and a Legacy-enabled roster boss awarding 2.5× XP.</li>
+          <li>Created fighters and generated opponents cannot use Legacy Moves in this version.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.51</span></div>
+        <ul>
+          <li>Bug fixes.</li>
+          <li>Removed fighter-to-fighter movement blocking so competitors can pass through one another and use the full width of every arena.</li>
+          <li>Reworked facing direction so crossing behind an opponent preserves orientation until the fighter deliberately moves back toward them.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.5</span></div>
+        <h3>MULTIPLAYER</h3>
+        <ul>
+          <li>Added private online lobby rooms with shareable six-character codes.</li>
+          <li>Added synchronized fighter selection, arena selection and two-player combat over the internet.</li>
+          <li>Added host-authoritative match state, responsive local controls, motion smoothing and connection recovery to reduce lag and desynchronization.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.41</span></div>
+        <h3>COMBAT POLISH</h3>
+        <ul>
+          <li>Bug fixes.</li>
+          <li>Power Punches and Power Kicks now miss at point-blank range while still consuming stamina, rewarding deliberate spacing.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.4</span></div>
+        <h3>FORGE YOUR LEGACY</h3>
+        <p>A rebuilt fighter system and a new progression mode bring more identity and strategy to every match:</p>
+        <ul>
+          <li>Rebuilt active combat models around articulated 2D skeletons with improved anatomy, proportions, joint motion and grounded weight transfer.</li>
+          <li>Added Legacy Mode with inheritable signature moves, offensive techniques and athletic traits earned after victories.</li>
+          <li>Added a final adaptive competitor engineered to counter the build created during each Legacy Mode run.</li>
+          <li>Corrected unintended body-overlay artifacts and refined combat-model rendering.</li>
+          <li>Preserved the previous character renderer in the source as a rollback-safe fallback.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.33</span></div>
+        <h3>POWER COUNTS</h3>
+        <p>Knockdowns now reward true power instead of triggering automatically:</p>
+        <ul>
+          <li>Made knockdown chance scale directly with the attacking fighter’s Power rating.</li>
+          <li>Restricted knockdowns to Power Punches and Power Kicks.</li>
+          <li>Kept standard strikes, quick kicks and Legacy Moves on their grounded or move-specific reactions.</li>
+          <li>Removed the extra tournament subtitle from the startup screen.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.32</span></div>
+        <h3>IMPACT &amp; AIRWAVES</h3>
+        <p>Combat reactions and title music now feel cleaner and more varied:</p>
+        <ul>
+          <li>Rebuilt standard hit reactions with grounded recoil instead of vertical bouncing.</li>
+          <li>Added controlled heavy-hit knockdowns with distinct fall, floor and recovery phases.</li>
+          <li>Added four title-music tracks while keeping the original song as the opening theme.</li>
+          <li>Added randomized follow-up music with immediate-repeat prevention.</li>
+          <li>Removed the music-reactive startup-title pulsing.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.31</span></div>
+        <h3>THE TITLE DROP</h3>
+        <p>The opening presentation now has a complete soundtrack-driven sequence:</p>
+        <ul>
+          <li>Added music-reactive title motion that pulses and enlarges with the soundtrack.</li>
+          <li>Added a separate music-volume control connected to Master Volume and Sound On/Off.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.3</span></div>
+        <h3>RISE OF THE CHALLENGER</h3>
+        <p>Legacy Fighters now has a complete opening flow, expanded game options and a new survival-style challenge:</p>
+        <ul>
+          <li>Added a startup screen with the Legacy Fighters logo, Play menu, gamemode selection and Settings.</li>
+          <li>Added Challenge Mode with consecutive rounds and steadily increasing CPU health, reactions and strategy.</li>
+          <li>Added persistent master volume, effects volume, screen shake and fluid-motion settings.</li>
+          <li>Added fully customizable keyboard controls with conflict handling and a reset option.</li>
+          <li>Improved walking flow, body sway, hit recoil, airborne reactions, rotation and ground-bounce effects.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.2</span></div>
+        <h3>COMBAT REFORGED</h3>
+        <p>The fighting system has been rebuilt for cleaner animation, fairer contact and more tactical matches:</p>
+        <ul>
+          <li>Rebuilt hit detection with forward-facing attack ranges, active strike windows and body-size-aware contact.</li>
+          <li>Added separate jab, power punch, quick kick and power kick controls with distinct timing, reach, damage and stamina costs.</li>
+          <li>Improved striking poses so punches extend straight toward the opponent and kicks use proper knee and leg motion.</li>
+          <li>Added moving blocks, frontal guard detection, attack interruption and fair simultaneous hit resolution.</li>
+          <li>Reworked CPU strategy with delayed reactions, stamina management, spacing, pressure, retreating, varied attack choices and defensive tendencies.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.1</span></div>
+        <h3>WORLD TOUR UPDATE</h3>
+        <p>The tournament has expanded beyond its original arena:</p>
+        <ul>
+          <li>Added Stage Select after fighter selection with 10 playable fight locations.</li>
+          <li>Added distinct daytime, sunset and nighttime environments with city landmarks, natural scenery and specialized arenas.</li>
+          <li>Rebuilt every arena with detailed scenery, recognizable landmarks and greater environmental depth.</li>
+          <li>Rebuilt Legacy Move animations so punches, kicks, charges, strike combinations, slams, takedowns and suplexes match their move descriptions.</li>
+          <li>Added unique impact effects and throw reactions for different Legacy Move categories.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
+        <div><span>VERSION 1.01</span></div>
         <h3>THE FIGHTER IDENTITY UPDATE</h3>
         <p>This update gives the entire game and roster a stronger individual identity:</p>
         <ul>
           <li>Expanded the playable roster from 11 to 14 fighters with Beib Medoff, The Warrior and Kayess Hi.</li>
           <li>Added unique builds, hairstyles, facial hair, gear, colours, statistics and Legacy Moves across the roster.</li>
-          <li>Improved hair and beard detail, including Con McCon’s fuller ginger beard and proportional accessories.</li>
-          <li>Removed unwanted face markings while preserving intentional designs such as The Warrior’s mask and Kayess Hi’s paisley bandana.</li>
+          <li>Improved hair and beard detail and made all accessories proportional to their body designs.</li>
+          <li>Removed unwanted face markings while preserving intentional masks, headwear and bandanas.</li>
           <li>Added character-based stamina ratings, in-fight stamina bars, attack costs, blocking drain, recovery and guard breaks.</li>
           <li>Reorganized the 14-fighter selection screen and added this update log.</li>
         </ul>
@@ -106,6 +468,7 @@
     </div>
   </dialog>
 
-  <script type="module" src="game.js"></script>
+  <audio id="titleMusic" preload="auto" src="assets/audio/title-theme.mp3?v=1.7.2"></audio>
+  <script type="module" src="game.js?v=1.7.2"></script>
 </body>
 </html>

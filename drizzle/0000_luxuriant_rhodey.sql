@@ -1,0 +1,22 @@
+CREATE TABLE `multiplayer_rooms` (
+	`code` text PRIMARY KEY NOT NULL,
+	`host_token_hash` text NOT NULL,
+	`guest_token_hash` text,
+	`status` text DEFAULT 'waiting' NOT NULL,
+	`host_fighter` text,
+	`guest_fighter` text,
+	`stage_id` text,
+	`host_ready` integer DEFAULT false NOT NULL,
+	`guest_ready` integer DEFAULT false NOT NULL,
+	`host_input` text DEFAULT '{}' NOT NULL,
+	`guest_input` text DEFAULT '{}' NOT NULL,
+	`host_sequence` integer DEFAULT 0 NOT NULL,
+	`guest_sequence` integer DEFAULT 0 NOT NULL,
+	`snapshot` text,
+	`snapshot_sequence` integer DEFAULT 0 NOT NULL,
+	`host_seen_at` integer NOT NULL,
+	`guest_seen_at` integer,
+	`created_at` integer NOT NULL,
+	`updated_at` integer NOT NULL,
+	`expires_at` integer NOT NULL
+);
