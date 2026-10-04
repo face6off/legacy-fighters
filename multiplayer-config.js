@@ -1,3 +1,2 @@
-// Set this to the HTTPS Worker URL printed by `npm run deploy:api`.
-// Leave empty only when the frontend and API share the same origin.
-window.LEGACY_FIGHTERS_CONFIG = Object.freeze({ multiplayerApiUrl: '' });
+// Shared public multiplayer service. No credentials belong in this file.
+window.LEGACY_FIGHTERS_CONFIG = Object.freeze({ multiplayerApiUrl: 'https://legacy-fighters-multiplayer.sportixrblx.workers.dev' });

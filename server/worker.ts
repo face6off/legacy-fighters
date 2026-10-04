@@ -50,7 +50,7 @@ export default {
     };
     try {
       const path = new URL(request.url).pathname;
-      if (path === '/health' && request.method === 'GET') return cors(json({ ok: true, version: '1.8.0' }));
+      if (path === '/health' && request.method === 'GET') return cors(json({ ok: true, version: '1.81.0' }));
       const match = path.match(/^\/api\/multiplayer\/rooms(?:\/([A-Z0-9]{6}))?\/?$/);
       if (!match) return cors(json({ error: 'Endpoint not found.' }, 404));
       if (request.method === 'OPTIONS') return cors(new Response(null, { status: 204 }));

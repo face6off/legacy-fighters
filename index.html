@@ -7,20 +7,20 @@
   <meta name="description" content="Legacy Fighters — an original arcade fighting game with sixteen parody fighters and ten cinematic arenas." />
   <title>Legacy Fighters</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='13' fill='%23090712'/%3E%3Cpath d='M12 12h12v30h27v10H12z' fill='%23ffd23f'/%3E%3Cpath d='M30 12h22v10H40v7h10v10H30z' fill='%23ff3d5a'/%3E%3C/svg%3E" />
-  <link rel="stylesheet" href="styles.css?v=1.8.0" />
+  <link rel="stylesheet" href="styles.css?v=1.81.0" />
 </head>
 <body class="intro-pending">
   <div id="introGate" class="intro-gate" role="dialog" aria-modal="true" aria-label="Enter Legacy Fighters">
     <div class="intro-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="intro-prompt">
-      <img class="game-title-logo intro-logo" src="assets/legacy-fighters-logo.png?v=1.8.0" alt="Legacy Fighters" />
+      <img class="game-title-logo intro-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="Legacy Fighters" />
       <button id="enterGameBtn" class="intro-enter">CLICK TO ENTER</button>
     </div>
   </div>
 
   <main id="gameShell" class="shell intro-hidden">
     <header class="topbar">
-      <button id="homeBtn" class="brand home-brand" aria-label="Return to main menu"><img class="header-brand-logo" src="assets/legacy-fighters-logo.png?v=1.8.0" alt="Legacy Fighters" /></button>
+      <button id="homeBtn" class="brand home-brand" aria-label="Return to main menu"><img class="header-brand-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="Legacy Fighters" /></button>
       <div class="top-actions">
         <button id="soundBtn" class="icon-btn" aria-label="Toggle sound">SOUND ON</button>
         <button id="howBtn" class="icon-btn">CONTROLS</button>
@@ -29,9 +29,9 @@
     </header>
 
     <section id="startScreen" class="start-screen" aria-labelledby="gameTitle">
-      <img class="game-title-logo start-logo" src="assets/legacy-fighters-logo.png?v=1.8.0" alt="" aria-hidden="true" />
+      <img class="game-title-logo start-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="" aria-hidden="true" />
       <h1 id="gameTitle" class="sr-only">LEGACY FIGHTERS</h1>
-      <p class="start-version">VERSION 1.8</p>
+      <p class="start-version">VERSION 1.81</p>
       <div class="start-actions">
         <button id="playBtn" class="fight-btn">PLAY</button>
         <button id="settingsBtn" class="secondary-btn">SETTINGS</button>
@@ -321,6 +321,14 @@
     <h2 id="updatesTitle">UPDATE LOG</h2>
     <div class="update-list">
       <article class="update-entry current">
+        <div><span>VERSION 1.81</span></div>
+        <h3>PLAY ONLINE FROM YOUR LINK</h3>
+        <ul>
+          <li>Create and join private online rooms from GitHub Pages or the downloadable game.</li>
+          <li>Both players connect to the same online arena—share your room code to play together.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
         <div><span>VERSION 1.8</span></div>
         <h3>ONLINE ARENAS</h3>
         <ul>
@@ -478,8 +486,8 @@
     </div>
   </dialog>
 
-  <audio id="titleMusic" preload="auto" src="assets/audio/title-theme.mp3?v=1.8.0"></audio>
-  <script src="multiplayer-config.js?v=1.8.0"></script>
-  <script type="module" src="game.js?v=1.8.0"></script>
+  <audio id="titleMusic" preload="auto" src="assets/audio/title-theme.mp3?v=1.81.0"></audio>
+  <script src="multiplayer-config.js?v=1.81.0"></script>
+  <script type="module" src="game.js?v=1.81.0"></script>
 </body>
 </html>

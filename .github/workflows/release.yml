@@ -34,7 +34,7 @@ jobs:
       name: github-pages
       url: ${{ steps.pages.outputs.page_url }}
     permissions:
-      contents: read
+      contents: write
       pages: write
       id-token: write
     steps:
@@ -51,6 +51,7 @@ jobs:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WRANGLER_SEND_METRICS: 'false'
         run: |
+          set -euo pipefail
           npm run deploy:api | tee /tmp/legacy-fighters-deployment.log
           node scripts/deployment-url.mjs /tmp/legacy-fighters-deployment.log
       - name: Verify public API
@@ -62,6 +63,15 @@ jobs:
         env:
           MULTIPLAYER_API_URL: ${{ steps.worker.outputs.url }}
         run: node scripts/package-site.mjs
+      - name: Package downloadable game
+        run: |
+          cd dist/site
+          zip -r ../legacy-fighters-${GITHUB_REF_NAME}.zip .
+      - name: Attach game to release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$GITHUB_REF_NAME" "dist/legacy-fighters-${GITHUB_REF_NAME}.zip" --clobber
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

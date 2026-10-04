@@ -4,7 +4,7 @@ Legacy Fighters is an original browser fighting game with arcade combat, career 
 
 ## Current version
 
-Version 1.8 adds a standalone Cloudflare multiplayer service for static-hosted editions.
+Version 1.81 connects the source and downloadable editions to the shared online arena. Version 1.8 adds a standalone Cloudflare multiplayer service for static-hosted editions.
 
 ## Run locally
 
@@ -20,7 +20,7 @@ The browser-only modes run from the static files. Online multiplayer requires th
 
 ## Multiplayer development
 
-Use Node.js 24 and Python 3. Install the pinned tools with `npm ci`, then run `npm run dev:api` and `npm run dev` in separate terminals. Set `multiplayerApiUrl` in `multiplayer-config.js` to `http://127.0.0.1:8787` for local play. Both browsers must use the same API URL. Leave the tracked configuration empty until a public Worker URL is available; the release workflow generates the configured file in its static artifact.
+Use Node.js 24 and Python 3. Install the pinned tools with `npm ci`, then run `npm run dev:api` and `npm run dev` in separate terminals. For local testing, override `multiplayerApiUrl` in the browser or an untracked static copy to `http://127.0.0.1:8787` for local play. Both browsers must use the same API URL. The tracked configuration uses the public Worker URL; the release workflow generates the configured file in its static artifact.
 
 Run `npm test` to exercise the real Cloudflare local runtime: room lifecycle, concurrent joins, role/token authorization, CORS, input/snapshot synchronization, stale requests, rematches, room isolation and request validation. `npm run check:worker` builds the deployment bundle without publishing it.
 

@@ -64,13 +64,13 @@ const network={
 
 const TITLE_LEAD_SECONDS=2;
 const TITLE_TRACKS=[
-  {src:'assets/audio/title-theme.mp3?v=1.8.0',drop:15},
-  {src:'assets/audio/quebec.mp3?v=1.8.0',drop:24.65},
-  {src:'assets/audio/love-scars-2.mp3?v=1.8.0',drop:11.95},
-  {src:'assets/audio/zoom.mp3?v=1.8.0',drop:12.05},
-  {src:'assets/audio/heatin-up.mp3?v=1.8.0',drop:14.75},
-  {src:'assets/audio/whoopty-doo.mp3?v=1.8.0',drop:10.4},
-  {src:'assets/audio/ttg.mp3?v=1.8.0',drop:11.7}
+  {src:'assets/audio/title-theme.mp3?v=1.81.0',drop:15},
+  {src:'assets/audio/quebec.mp3?v=1.81.0',drop:24.65},
+  {src:'assets/audio/love-scars-2.mp3?v=1.81.0',drop:11.95},
+  {src:'assets/audio/zoom.mp3?v=1.81.0',drop:12.05},
+  {src:'assets/audio/heatin-up.mp3?v=1.81.0',drop:14.75},
+  {src:'assets/audio/whoopty-doo.mp3?v=1.81.0',drop:10.4},
+  {src:'assets/audio/ttg.mp3?v=1.81.0',drop:11.7}
 ];
 const INTRO_TRACK_STORAGE_KEY='legacyFightersLastIntroTrackV1';
 let activeIntroTrack=null,activeIntroStart=0,introPlaybackStartedAt=0;

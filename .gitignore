@@ -7,3 +7,6 @@ dist/
 *.tar.gz
 *.zip
 *.openai*
+
+.openai/
+**/.openai*/
