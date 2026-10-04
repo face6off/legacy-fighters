@@ -159,7 +159,7 @@ button { font: inherit; }
 .creator-preview-panel,.creator-panel,.career-profile-panel,.career-training-panel { border: 1px solid var(--line); border-radius: 9px; background: radial-gradient(circle at 84% 7%,rgba(255,210,63,.08),transparent 34%),rgba(18,14,31,.88); box-shadow: 0 22px 60px rgba(0,0,0,.25); }
 .creator-preview-panel { position: sticky; top: 92px; padding: 18px; text-align: center; }
 .creator-preview-panel > p { margin: 14px 6px 2px; color: var(--muted); font-size: .77rem; line-height: 1.5; }
-.career-portrait { width: 100%; min-height: 370px; cursor: default; --color:#3a52b8;--accent:#ffd23f;--skin:#b97a56;--hair:#241914;--body-scale:1.02;--height-scale:1.01; }
+.fighter-card.career-portrait { width: 100%; min-height: 370px; cursor: default; --color:#3a52b8;--accent:#ffd23f;--skin:#b97a56;--hair:#241914;--body-scale:1.02;--height-scale:1.01; }
 .career-portrait:hover { transform: none; border-color: var(--line); }
 .career-portrait > .portrait { inset: 0; }
 .career-portrait .card-info { min-height: 66px; padding: 12px 16px; }
@@ -199,7 +199,7 @@ button { font: inherit; }
 .career-dashboard { display: grid; grid-template-columns: minmax(250px,330px) 1fr; gap: 20px; align-items: stretch; }
 .career-profile-panel { padding: 16px; }
 .career-profile-panel .career-portrait { min-height: 310px; }
-.career-profile-panel .career-portrait > .portrait { inset: 24px 0 0; transform: scale(1.35); }
+.career-profile-panel .career-portrait > .portrait { inset: 0; }
 .career-xp-block { margin-top: 15px; }
 .career-xp-block > div:first-child { display: flex; justify-content: space-between; gap: 12px; color: var(--muted); font-size: .72rem; }
 .career-xp-block strong { color: var(--gold); letter-spacing: .08em; }
