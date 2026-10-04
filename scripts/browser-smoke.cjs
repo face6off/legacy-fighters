@@ -25,7 +25,42 @@ const api = process.env.MULTIPLAYER_API_URL || 'http://127.0.0.1:8787';
         contentType: 'application/javascript',
         body: `window.LEGACY_FIGHTERS_CONFIG=${JSON.stringify({ multiplayerApiUrl: api })};`,
       }));
+      // Expose private reconciliation functions only in this test browser.
+      await page.route('**/game.js*', async route => {
+        const response = await route.fetch();
+        await route.fulfill({ response, body: (await response.text()) + `
+          window.checkNetworkReconciliation = () => {
+            const fighter = new Fighter(ROSTER[1], 500, 1);
+            const idle = fighterSnapshot(fighter);
+            const started = fighter.attack('jab');
+            const cooldown = fighter.cooldown, stamina = fighter.stamina;
+            applySnapshotFighter(fighter, idle, 1/60, true, true);
+            const protectedAttack = started && fighter.cooldown >= cooldown && fighter.stamina === stamina && !fighter.attack('cross');
+            const remote = new Fighter(ROSTER[0], 500, 1);
+            remote.state = 'jab'; remote.stateTime = .25;
+            const attack = { ...fighterSnapshot(remote), stateTime: .1 };
+            applySnapshotFighter(remote, attack, 1/60);
+            const noRewind = remote.stateTime === .25;
+            applySnapshotFighter(remote, attack, 1/60, false, false, .3);
+            applySnapshotFighter(remote, { ...attack, stateTime: .2 }, 1/60);
+            const noReplay = remote.state === 'idle';
+            applySnapshotFighter(remote, { ...attack, animationSequence: attack.animationSequence + 1, stateTime: 0 }, 1/60);
+            const newAttack = remote.state === 'jab' && remote.stateTime === 0;
+            return { protectedAttack, noRewind, noReplay, newAttack };
+          };
+        ` });
+      });
+      if(index === 1) await page.route('**/api/multiplayer/rooms/**', async route => {
+        const request = route.request();
+        if(request.method() === 'POST' && request.postDataJSON()?.action === 'sync') {
+          await new Promise(resolve => setTimeout(resolve, 120));
+        }
+        await route.continue();
+      });
       await page.goto(site);
+      assert.deepEqual(await page.evaluate(() => window.checkNetworkReconciliation()), {
+        protectedAttack: true, noRewind: true, noReplay: true, newAttack: true,
+      });
       pages.push(page);
     }
     async function enterMultiplayer(page) {

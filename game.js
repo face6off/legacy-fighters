@@ -1,4 +1,4 @@
-import { hitPoseAngle, snapshotVisualState } from './fighter-visuals.js';
+import { hitPoseAngle, snapshotVisualState, reconcileSnapshotVisuals } from './fighter-visuals.js?v=1.81.3';
 import { multiplayerRequest } from './multiplayer-client.js';
 import { ROSTER, STAGES, ATTACKS, clamp, attackDamage, shouldKnockdown, canStrike, selectCpu, resolveFacingDirection } from './game-data.js';
 import { LEGACY_TOTAL_ROUNDS, createLegacyRun, legacyRewardOptions, applyLegacyReward, buildCounterFighter } from './legacy-mode.js';
@@ -61,7 +61,7 @@ const network={
   code:null,token:null,role:null,room:null,pollTimer:0,syncPending:false,syncQueued:false,
   nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,
   snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,
-  consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,stageSelectDismissed:false
+  consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,guestAttackAck:0,attackSentInputSequence:0,stageSelectDismissed:false
 };
 
 const TITLE_LEAD_SECONDS=2;
@@ -377,7 +377,7 @@ function saveRoomSession(){
 function clearRoomSession(){localStorage.removeItem(ROOM_SESSION_KEY);}
 function stopRoomPoll(){clearTimeout(network.pollTimer);network.pollTimer=0;}
 function resetNetworkState(){
-  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,stageSelectDismissed:false});
+  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,guestAttackAck:0,attackSentInputSequence:0,stageSelectDismissed:false});
 }
 function updatePing(roundTrip){
   if(!Number.isFinite(roundTrip))return;
@@ -477,6 +477,7 @@ class Fighter {
   constructor(data, x, facing, isCpu=false, difficulty=1) {
     this.data=data; this.x=x; this.y=560; this.facing=facing; this.isCpu=isCpu;
     this.difficulty=difficulty;this.maxHealth=isCpu?Math.round(100+Math.max(0,difficulty-1)*70):100;this.health=this.maxHealth; this.meter=data.allowLegacy===false?0:20; this.maxStamina=65+data.stamina*5; this.stamina=this.maxStamina; this.staminaDelay=0;
+    this.animationSequence=0;this.predictedAttackSequence=0;
     this.vx=0; this.state='idle'; this.stateTime=0; this.cooldown=0; this.hitDone=false; this.flash=0; this.blocking=false; this.aiWait=0;this.throwType=null;this.throwTime=0;
     this.ai=isCpu?createCpuProfile(data,difficulty):null;this.aiPlan='observe';this.aiPlanTime=0;this.aiReaction=0;this.aiAware=false;
     this.remoteControlled=false;this.remoteInput={};
@@ -488,7 +489,7 @@ class Fighter {
     if (kind==='special' && (this.data.allowLegacy===false || this.meter<100)) return false;
     if(this.stamina<move.stamina){if(!this.isCpu)beep(52,.08,'square');return false;}
     this.stamina-=move.stamina;this.staminaDelay=move.duration+.18;
-    this.state=kind; this.stateTime=0; this.hitDone=false;if(kind==='shove')this.shoveRoll=Math.random();
+    this.animationSequence+=1;this.state=kind; this.stateTime=0; this.hitDone=false;if(kind==='shove')this.shoveRoll=Math.random();
     this.cooldown=move.cooldown;
     if(kind==='special') { this.meter=0; flashScreen(); beep(95,.18,'sawtooth'); }
     else beep(kind==='heavyKick'?92:kind==='kick'?130:kind==='cross'?115:190,.05,'square');
@@ -566,34 +567,54 @@ function controlledFighter(){return gameMode==='multiplayer'&&network.role==='gu
 function performLocalAttack(action){
   const fighter=controlledFighter(),started=fighter?.attack(action);
   if(started&&gameMode==='multiplayer'){
-    network.attackSequence+=1;network.attackAction=action;syncNetwork(true);
+    network.attackSequence+=1;network.attackAction=action;
+    if(network.role==='guest'){fighter.predictedAttackSequence=network.attackSequence;fighter.predictedAttackState=action;fighter.predictedAttackTime=0;network.attackSentInputSequence=0;}syncNetwork(true);
   }
   return started;
 }
 function localNetworkInput(){return {left:actionHeld('left'),right:actionHeld('right'),block:actionHeld('block'),attackAction:network.attackAction,attackSequence:network.attackSequence};}
 function fighterSnapshot(f){
-  return {x:f.x,vx:f.vx,facing:f.facing,health:f.health,maxHealth:f.maxHealth,stamina:f.stamina,maxStamina:f.maxStamina,meter:f.meter,state:f.state,stateTime:f.stateTime,cooldown:f.cooldown,blocking:f.blocking,flash:f.flash,hurtDuration:f.hurtDuration,ragAngle:f.ragAngle,hitLean:f.hitLean,hitDirection:f.hitDirection,knockdown:f.knockdown,knockdownDirection:f.knockdownDirection,throwType:f.throwType,throwTime:f.throwTime,stepPhase:f.stepPhase};
+  return {animationSequence:f.animationSequence,x:f.x,vx:f.vx,facing:f.facing,health:f.health,maxHealth:f.maxHealth,stamina:f.stamina,maxStamina:f.maxStamina,meter:f.meter,state:f.state,stateTime:f.stateTime,cooldown:f.cooldown,blocking:f.blocking,flash:f.flash,hurtDuration:f.hurtDuration,ragAngle:f.ragAngle,hitLean:f.hitLean,hitDirection:f.hitDirection,knockdown:f.knockdown,knockdownDirection:f.knockdownDirection,throwType:f.throwType,throwTime:f.throwTime,stepPhase:f.stepPhase};
 }
-function createNetworkSnapshot(ended=false,winner=null){return {player:fighterSnapshot(player),cpu:fighterSnapshot(cpu),timer,startDelay,ended,winner,guestAck:network.room?.guestSequence||0,serverTime:Date.now()};}
+function createNetworkSnapshot(ended=false,winner=null){return {player:fighterSnapshot(player),cpu:fighterSnapshot(cpu),timer,startDelay,ended,winner,guestAck:network.room?.guestSequence||0,guestAttackAck:network.remoteAttackSequence,serverTime:Date.now()};}
 function applySnapshotFighter(f,target,dt,localPrediction=false,preserveAction=false,snapshotAge=0){
-  if(!target)return;target=snapshotVisualState(target,snapshotAge);const blend=Math.min(1,dt*(localPrediction?8:15));
-  f.x+=(target.x-f.x)*blend;f.vx+=(target.vx-f.vx)*blend;f.health+=(target.health-f.health)*Math.min(1,dt*18);f.stamina+=(target.stamina-f.stamina)*Math.min(1,dt*14);f.meter+=(target.meter-f.meter)*Math.min(1,dt*14);
+  if(!target)return;
+  const alignPrediction=localPrediction&&f.predictedAttackSequence>0&&network.guestAttackAck>=f.predictedAttackSequence;
+  target=reconcileSnapshotVisuals(f,target,snapshotAge,alignPrediction);
+  if(!preserveAction)f.predictedAttackSequence=0;
+  const blend=Math.min(1,dt*(localPrediction?8:15));
+  f.x+=(target.x-f.x)*blend;f.vx+=(target.vx-f.vx)*blend;f.health+=(target.health-f.health)*Math.min(1,dt*18);if(!preserveAction){f.stamina+=(target.stamina-f.stamina)*Math.min(1,dt*14);f.meter+=(target.meter-f.meter)*Math.min(1,dt*14);}
   if(!preserveAction){f.state=target.state;f.stateTime=target.stateTime;}
-  for(const field of ['facing','maxHealth','maxStamina','cooldown','blocking','flash','hurtDuration','ragAngle','hitLean','hitDirection','knockdown','knockdownDirection','throwType','throwTime','stepPhase'])if(target[field]!==undefined)f[field]=target[field];
+  if(preserveAction)f.cooldown=Math.max(f.cooldown,target.cooldown);
+  for(const field of ['facing','maxHealth','maxStamina','cooldown','blocking','flash','hurtDuration','ragAngle','hitLean','hitDirection','knockdown','knockdownDirection','throwType','throwTime','stepPhase'])if(target[field]!==undefined&&!(preserveAction&&['cooldown','blocking'].includes(field)))f[field]=target[field];
 }
 function acceptNetworkSnapshot(snapshot,sequence){
   if(!snapshot||sequence<=network.lastSnapshotSequence)return;
-  network.lastSnapshotSequence=sequence;network.snapshotReceivedAt=performance.now();network.targets={player:snapshot.player,cpu:snapshot.cpu};network.timerTarget=snapshot.timer;network.guestAck=Math.max(network.guestAck,snapshot.guestAck||0);startDelay=snapshot.startDelay;
+  network.lastSnapshotSequence=sequence;network.snapshotReceivedAt=performance.now();
+  network.targets={player:snapshot.player,cpu:snapshot.cpu};network.timerTarget=snapshot.timer;
+  network.guestAck=Math.max(network.guestAck,snapshot.guestAck||0);
+  // Older clients acknowledge the input request rather than the individual attack.
+  const attackAck=Number.isSafeInteger(snapshot.guestAttackAck)?snapshot.guestAttackAck:
+    (network.attackSentInputSequence>0&&network.guestAck>=network.attackSentInputSequence?network.attackSequence:0);
+  network.guestAttackAck=Math.max(network.guestAttackAck,attackAck);startDelay=snapshot.startDelay;
   if(snapshot.ended&&!network.resultShown){applySnapshotFighter(player,snapshot.player,1);applySnapshotFighter(cpu,snapshot.cpu,1);timer=snapshot.timer;showMultiplayerResult(snapshot.winner);}
 }
 function applyGuestNetworkFrame(dt){
   const snapshotAge=Math.max(0,(performance.now()-network.snapshotReceivedAt)/1000);
-  if(network.targets){const pendingLocalAction=network.guestAck<network.inputSequence&&network.targets.cpu.state!=='hurt'&&(cpu.isAttacking()||cpu.state==='block');applySnapshotFighter(player,network.targets.player,dt,false,false,snapshotAge);applySnapshotFighter(cpu,network.targets.cpu,dt,true,pendingLocalAction,snapshotAge);}
+  if(network.targets){
+    const hostVisual=snapshotVisualState(network.targets.cpu,snapshotAge);
+    const pendingAttack=network.guestAttackAck<network.attackSequence;
+    const pendingLocalAction=hostVisual.state!=='hurt'&&(pendingAttack||(cpu.state==='block'&&actionHeld('block')));
+    applySnapshotFighter(player,network.targets.player,dt,false,false,snapshotAge);
+    applySnapshotFighter(cpu,network.targets.cpu,dt,true,pendingLocalAction,snapshotAge);
+  }
   if(Number.isFinite(network.timerTarget)){network.timerTarget=Math.max(0,network.timerTarget-dt);timer+=(network.timerTarget-timer)*Math.min(1,dt*8);}
   const local=cpu,attacking=local.isAttacking();
   if(!attacking&&local.state!=='hurt'&&startDelay<=0){
     const axis=(actionHeld('right')?1:0)-(actionHeld('left')?1:0);local.blocking=actionHeld('block')&&local.stamina>0;const desired=axis*(170+local.data.speed*10)*(local.blocking?.45:1);local.vx+=(desired-local.vx)*Math.min(1,dt*13);local.x=clamp(local.x+local.vx*dt,90,1190);local.facing=resolveFacingDirection(local,player,axis);if(!axis)local.vx*=Math.pow(.08,dt);if(!network.targets)local.state=local.blocking?'block':Math.abs(local.vx)>.1?'walk':'idle';
   }
+  cpu.cooldown=Math.max(0,cpu.cooldown-dt);
+  if(cpu.predictedAttackSequence>0)cpu.predictedAttackTime+=dt;
   for(const fighter of [player,cpu])if(fighter.isAttacking()||fighter.state==='hurt'){
     fighter.stateTime+=dt;
     const duration=ATTACKS[fighter.state]?.duration??fighter.hurtDuration;
@@ -604,6 +625,7 @@ async function syncNetwork(force=false){
   if(gameMode!=='multiplayer'||!network.code||!network.token)return;
   if(network.syncPending){network.syncQueued=network.syncQueued||force;return;}
   network.syncPending=true;network.inputSequence+=1;
+  if(network.role==='guest'&&network.attackSequence>network.guestAttackAck&&!network.attackSentInputSequence)network.attackSentInputSequence=network.inputSequence;
   const payload={input:localNetworkInput(),sequence:network.inputSequence};
   if(network.role==='host'){
     const snapshot=network.pendingFinalSnapshot||(running?createNetworkSnapshot():null);
@@ -624,6 +646,7 @@ function startMultiplayerMatch(room){
   stopRoomPoll();gameMode='multiplayer';network.room=room;network.resultShown=false;network.targets=null;network.lastSnapshotSequence=0;network.snapshotSequence=room.snapshotSequence||0;network.nextSyncAt=0;
   network.inputSequence=(network.role==='host'?room.hostSequence:room.guestSequence)||0;
   network.attackSequence=(network.role==='host'?room.hostInput:room.guestInput)?.attackSequence||0;
+  network.guestAttackAck=room.snapshot?.guestAttackAck||0;network.attackSentInputSequence=0;
   network.remoteAttackSequence=(network.role==='host'?room.guestInput:room.hostInput)?.attackSequence||0;
   const hostData=ROSTER.find(f=>f.id===room.hostFighter),guestData=ROSTER.find(f=>f.id===room.guestFighter),stage=STAGES.find(item=>item.id===room.stageId);
   if(!hostData||!guestData||!stage){networkMessage('The room has invalid match data.',true);showOnly(multiplayerScreen);return;}
@@ -668,12 +691,12 @@ function hit(attacker, target, kind) {
   const frontBlock=target.blocking&&((attacker.x-target.x)*target.facing>0);
   const defenseFactor=clamp(1.16-target.data.defense*.035,.81,1.08),rawDamage=attackDamage(attacker.data,kind,frontBlock),damage=rawDamage*defenseFactor*(attacker.isCpu?1+Math.max(0,attacker.difficulty-1)*.35:1),move=ATTACKS[kind];
   target.health=clamp(target.health-damage,0,target.maxHealth);attacker.meter=attacker.data.allowLegacy===false?0:clamp(attacker.meter+(kind==='special'?0:damage*2.1),0,100);target.meter=target.data.allowLegacy===false?0:clamp(target.meter+damage*1.15,0,100);
-  if(frontBlock){target.stamina=Math.max(0,target.stamina-damage*1.6);target.staminaDelay=.7;if(target.stamina===0){target.blocking=false;target.state='hurt';target.stateTime=0;target.hurtDuration=.32;target.knockdown=false;target.hitDirection=attacker.facing;target.hitLean=.2;}}
+  if(frontBlock){target.stamina=Math.max(0,target.stamina-damage*1.6);target.staminaDelay=.7;if(target.stamina===0){target.animationSequence+=1;target.blocking=false;target.state='hurt';target.stateTime=0;target.hurtDuration=.32;target.knockdown=false;target.hitDirection=attacker.facing;target.hitLean=.2;}}
   target.flash=.13; target.vx=attacker.facing*move.knockback;
   const grappled=kind==='special'&&['groundSlam','bodySlam','suplex','takedown'].includes(attacker.data.legacy);
   if(grappled){target.throwType=attacker.data.legacy;target.throwTime=0;}
   if(!frontBlock){
-    target.blocking=false;target.state='hurt';target.stateTime=0;target.hitDone=true;
+    target.animationSequence+=1;target.blocking=false;target.state='hurt';target.stateTime=0;target.hitDone=true;
     target.knockdown=shouldKnockdown(kind,attacker.data.power);target.knockdownDirection=attacker.facing;target.hitDirection=attacker.facing;
     target.hitLean=kind==='shove'?.24:kind==='heavyKick'?.34:kind==='cross'?.28:kind==='kick'?.22:.15;target.hurtDuration=target.knockdown?(target.health<=0?1.18:.92):grappled?.92:kind==='shove'?.3:kind==='heavyKick'?.4:kind==='cross'?.34:kind==='kick'?.3:.24;target.ragAngle=0;
   }

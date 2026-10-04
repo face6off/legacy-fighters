@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { snapshotVisualState, hitPoseAngle } from '../fighter-visuals.js';
+import { snapshotVisualState, hitPoseAngle, reconcileSnapshotVisuals } from '../fighter-visuals.js';
 
 const hurt = { state: 'hurt', stateTime: 0, flash: .13, cooldown: .3, stepPhase: 0,
   vx: 100, health: 70, hurtDuration: .24, throwType: null, throwTime: 0,
@@ -44,4 +44,34 @@ test('delayed attack poses finish and cooldown expires without predicting damage
   assert.equal(projected.cooldown, 0);
   assert.equal(projected.health, attack.health);
   assert.equal(snapshotVisualState(attack, -.1).stateTime, 0);
+});
+
+
+test('updates from the same animation cannot rewind it or replay a completed attack', () => {
+  const current = { ...hurt, state: 'jab', stateTime: .25 };
+  const packet = { ...hurt, state: 'jab', stateTime: .1, animationSequence: 7 };
+  const first = reconcileSnapshotVisuals(current, packet, 0);
+  assert.equal(first.stateTime, .25);
+  Object.assign(current, first);
+  const done = reconcileSnapshotVisuals(current, packet, .3);
+  assert.equal(done.state, 'idle');
+  Object.assign(current, done);
+  assert.equal(reconcileSnapshotVisuals(current, { ...packet, stateTime: .2 }, 0).state, 'idle');
+});
+
+test('new attacks and repeated hits can restart even when their state name is unchanged', () => {
+  const current = { ...hurt, stateTime: .2 };
+  reconcileSnapshotVisuals(current, { ...hurt, animationSequence: 1 }, 0);
+  const newHit = reconcileSnapshotVisuals(current, { ...hurt, health: 60, animationSequence: 2 }, 0);
+  assert.equal(newHit.stateTime, 0);
+  assert.equal(newHit.flash, .13);
+  const attack = { ...hurt, state: 'jab', stateTime: .2 };
+  reconcileSnapshotVisuals(attack, { ...attack, animationSequence: 3 }, 0);
+  assert.equal(reconcileSnapshotVisuals(attack, { ...attack, stateTime: 0, animationSequence: 4 }, 0).stateTime, 0);
+});
+
+test('acknowledging a predicted attack preserves its progress, including after completion', () => {
+  const current = { ...hurt, state: 'idle', stateTime: 0, predictedAttackState: 'jab', predictedAttackTime: .4 };
+  const packet = { ...hurt, state: 'jab', stateTime: .05, animationSequence: 5 };
+  assert.equal(reconcileSnapshotVisuals(current, packet, 0, true).state, 'idle');
 });

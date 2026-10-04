@@ -29,3 +29,25 @@ export function snapshotVisualState(snapshot, elapsed) {
   visual.ragAngle = hitPoseAngle(visual);
   return visual;
 }
+
+// Keep one authoritative animation moving forward, but allow a new hit/attack to restart.
+export function reconcileSnapshotVisuals(current, snapshot, elapsed, alignPrediction = false) {
+  const visual = snapshotVisualState(snapshot, elapsed);
+  const previous = current.networkAnimation;
+  const sameAnimation = previous && previous.state === snapshot.state && (
+    Number.isSafeInteger(snapshot.animationSequence)
+      ? previous.sequence === snapshot.animationSequence
+      : snapshot.stateTime >= previous.sourceTime && snapshot.health >= previous.health);
+  let progress = snapshot.stateTime + Math.max(0, elapsed);
+  if (alignPrediction && current.predictedAttackState === snapshot.state) {
+    progress = Math.max(progress, current.predictedAttackTime || 0);
+  }
+  if (sameAnimation) progress = Math.max(progress, previous.progress);
+  if ((sameAnimation || !previous || alignPrediction) && current.state === snapshot.state
+      && !(snapshot.state === 'hurt' && !sameAnimation && snapshot.health < current.health)) {
+    progress = Math.max(progress, current.stateTime);
+  }
+  current.networkAnimation = { state: snapshot.state, sequence: snapshot.animationSequence,
+    sourceTime: snapshot.stateTime, health: snapshot.health, progress };
+  return snapshotVisualState({ ...visual, state: snapshot.state, stateTime: progress }, 0);
+}
