@@ -6,7 +6,7 @@ if (!apiUrl || !apiUrl.startsWith('https://')) throw new Error('Set MULTIPLAYER_
 const destination = 'dist/site';
 await rm(destination, { recursive: true, force: true });
 await mkdir(destination, { recursive: true });
-for (const name of ['index.html', 'styles.css', 'favicon.svg', 'game.js', 'game-data.js', 'career-mode.js', 'legacy-mode.js', 'multiplayer-client.js', 'assets']) {
+for (const name of ['index.html', 'styles.css', 'favicon.svg', 'game.js', 'game-data.js', 'career-mode.js', 'legacy-mode.js', 'multiplayer-client.js', 'fighter-visuals.js', 'assets']) {
   await cp(name, `${destination}/${name}`, { recursive: true, filter: path => !path.split(/[\\/]/).some(part => part.toLowerCase().includes('.openai')) });
 }
 await writeFile(`${destination}/multiplayer-config.js`, `window.LEGACY_FIGHTERS_CONFIG = Object.freeze(${JSON.stringify({ multiplayerApiUrl: apiUrl })});\n`);

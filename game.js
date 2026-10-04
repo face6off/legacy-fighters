@@ -1,3 +1,4 @@
+import { hitPoseAngle, snapshotVisualState } from './fighter-visuals.js';
 import { multiplayerRequest } from './multiplayer-client.js';
 import { ROSTER, STAGES, ATTACKS, clamp, attackDamage, shouldKnockdown, canStrike, selectCpu, resolveFacingDirection } from './game-data.js';
 import { LEGACY_TOTAL_ROUNDS, createLegacyRun, legacyRewardOptions, applyLegacyReward, buildCounterFighter } from './legacy-mode.js';
@@ -59,7 +60,7 @@ const NETWORK_TICK_MS=40,ROOM_SESSION_KEY='legacyFightersMultiplayerRoom:' + Str
 const network={
   code:null,token:null,role:null,room:null,pollTimer:0,syncPending:false,syncQueued:false,
   nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,
-  snapshotSequence:0,lastSnapshotSequence:0,targets:null,resultShown:false,pendingFinalSnapshot:null,
+  snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,
   consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,stageSelectDismissed:false
 };
 
@@ -376,7 +377,7 @@ function saveRoomSession(){
 function clearRoomSession(){localStorage.removeItem(ROOM_SESSION_KEY);}
 function stopRoomPoll(){clearTimeout(network.pollTimer);network.pollTimer=0;}
 function resetNetworkState(){
-  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,stageSelectDismissed:false});
+  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,stageSelectDismissed:false});
 }
 function updatePing(roundTrip){
   if(!Number.isFinite(roundTrip))return;
@@ -498,14 +499,8 @@ class Fighter {
   update(dt, opponent) {
     this.stateTime += dt; this.cooldown=Math.max(0,this.cooldown-dt); this.flash=Math.max(0,this.flash-dt);this.staminaDelay=Math.max(0,this.staminaDelay-dt);
     this.stepPhase+=Math.abs(this.vx)*dt*.045;
-    if(this.throwType)this.ragAngle=0;
-    else if(this.state==='hurt'){
-      const p=clamp(this.stateTime/this.hurtDuration,0,1);
-      if(this.knockdown){
-        let fall;if(p<.28){const t=p/.28;fall=1-Math.pow(1-t,3);}else if(p<.7)fall=1;else{const t=(p-.7)/.3;fall=1-(t*t*(3-2*t));}
-        this.ragAngle=this.knockdownDirection*fall*1.36;
-      }else this.ragAngle=this.hitDirection*this.hitLean*Math.sin(p*Math.PI);
-    }else this.ragAngle*=Math.pow(.001,dt);
+    if(this.state==='hurt'||this.throwType)this.ragAngle=hitPoseAngle(this);
+    else this.ragAngle*=Math.pow(.001,dt);
     if(this.throwType){this.throwTime+=dt;if(this.throwTime>.92){this.throwType=null;this.throwTime=0;}}
     if (this.isCpu) this.think(dt, opponent);
     const held=action=>this.remoteControlled?Boolean(this.remoteInput?.[action]):actionHeld(action);
@@ -580,25 +575,30 @@ function fighterSnapshot(f){
   return {x:f.x,vx:f.vx,facing:f.facing,health:f.health,maxHealth:f.maxHealth,stamina:f.stamina,maxStamina:f.maxStamina,meter:f.meter,state:f.state,stateTime:f.stateTime,cooldown:f.cooldown,blocking:f.blocking,flash:f.flash,hurtDuration:f.hurtDuration,ragAngle:f.ragAngle,hitLean:f.hitLean,hitDirection:f.hitDirection,knockdown:f.knockdown,knockdownDirection:f.knockdownDirection,throwType:f.throwType,throwTime:f.throwTime,stepPhase:f.stepPhase};
 }
 function createNetworkSnapshot(ended=false,winner=null){return {player:fighterSnapshot(player),cpu:fighterSnapshot(cpu),timer,startDelay,ended,winner,guestAck:network.room?.guestSequence||0,serverTime:Date.now()};}
-function applySnapshotFighter(f,target,dt,localPrediction=false,preserveAction=false){
-  if(!target)return;const blend=Math.min(1,dt*(localPrediction?8:15));
+function applySnapshotFighter(f,target,dt,localPrediction=false,preserveAction=false,snapshotAge=0){
+  if(!target)return;target=snapshotVisualState(target,snapshotAge);const blend=Math.min(1,dt*(localPrediction?8:15));
   f.x+=(target.x-f.x)*blend;f.vx+=(target.vx-f.vx)*blend;f.health+=(target.health-f.health)*Math.min(1,dt*18);f.stamina+=(target.stamina-f.stamina)*Math.min(1,dt*14);f.meter+=(target.meter-f.meter)*Math.min(1,dt*14);
-  if(!preserveAction){if(f.state!==target.state){f.state=target.state;f.stateTime=target.stateTime;}else f.stateTime=Math.max(f.stateTime,target.stateTime);}
+  if(!preserveAction){f.state=target.state;f.stateTime=target.stateTime;}
   for(const field of ['facing','maxHealth','maxStamina','cooldown','blocking','flash','hurtDuration','ragAngle','hitLean','hitDirection','knockdown','knockdownDirection','throwType','throwTime','stepPhase'])if(target[field]!==undefined)f[field]=target[field];
 }
 function acceptNetworkSnapshot(snapshot,sequence){
   if(!snapshot||sequence<=network.lastSnapshotSequence)return;
-  network.lastSnapshotSequence=sequence;network.targets={player:snapshot.player,cpu:snapshot.cpu};network.timerTarget=snapshot.timer;network.guestAck=Math.max(network.guestAck,snapshot.guestAck||0);startDelay=snapshot.startDelay;
+  network.lastSnapshotSequence=sequence;network.snapshotReceivedAt=performance.now();network.targets={player:snapshot.player,cpu:snapshot.cpu};network.timerTarget=snapshot.timer;network.guestAck=Math.max(network.guestAck,snapshot.guestAck||0);startDelay=snapshot.startDelay;
   if(snapshot.ended&&!network.resultShown){applySnapshotFighter(player,snapshot.player,1);applySnapshotFighter(cpu,snapshot.cpu,1);timer=snapshot.timer;showMultiplayerResult(snapshot.winner);}
 }
 function applyGuestNetworkFrame(dt){
-  if(network.targets){const pendingLocalAction=network.guestAck<network.inputSequence&&(cpu.isAttacking()||cpu.state==='block');applySnapshotFighter(player,network.targets.player,dt,false);applySnapshotFighter(cpu,network.targets.cpu,dt,true,pendingLocalAction);}
+  const snapshotAge=Math.max(0,(performance.now()-network.snapshotReceivedAt)/1000);
+  if(network.targets){const pendingLocalAction=network.guestAck<network.inputSequence&&network.targets.cpu.state!=='hurt'&&(cpu.isAttacking()||cpu.state==='block');applySnapshotFighter(player,network.targets.player,dt,false,false,snapshotAge);applySnapshotFighter(cpu,network.targets.cpu,dt,true,pendingLocalAction,snapshotAge);}
   if(Number.isFinite(network.timerTarget)){network.timerTarget=Math.max(0,network.timerTarget-dt);timer+=(network.timerTarget-timer)*Math.min(1,dt*8);}
   const local=cpu,attacking=local.isAttacking();
   if(!attacking&&local.state!=='hurt'&&startDelay<=0){
     const axis=(actionHeld('right')?1:0)-(actionHeld('left')?1:0);local.blocking=actionHeld('block')&&local.stamina>0;const desired=axis*(170+local.data.speed*10)*(local.blocking?.45:1);local.vx+=(desired-local.vx)*Math.min(1,dt*13);local.x=clamp(local.x+local.vx*dt,90,1190);local.facing=resolveFacingDirection(local,player,axis);if(!axis)local.vx*=Math.pow(.08,dt);if(!network.targets)local.state=local.blocking?'block':Math.abs(local.vx)>.1?'walk':'idle';
   }
-  for(const fighter of [player,cpu])if(fighter.isAttacking()||fighter.state==='hurt')fighter.stateTime+=dt;
+  for(const fighter of [player,cpu])if(fighter.isAttacking()||fighter.state==='hurt'){
+    fighter.stateTime+=dt;
+    const duration=ATTACKS[fighter.state]?.duration??fighter.hurtDuration;
+    if(fighter.stateTime>duration){fighter.state='idle';fighter.stateTime=0;fighter.knockdown=false;fighter.ragAngle=0;}
+  }
 }
 async function syncNetwork(force=false){
   if(gameMode!=='multiplayer'||!network.code||!network.token)return;
@@ -838,7 +838,7 @@ function drawFighterV133(f){
   const kickMove=['spinKick','roundhouse','counterKick'].includes(legacy),grappleMove=['groundSlam','bodySlam','suplex','takedown'].includes(legacy),punchMove=['punchCombo','strikeFlurry','straightPunch','overhand'].includes(legacy),chargeMove=legacy==='shoulderCharge',spinMove=legacy==='spinAttack';
   const throwProgress=f.throwType?Math.min(1,f.throwTime/.58):0,throwLift=f.throwType?Math.sin(throwProgress*Math.PI)*(f.throwType==='takedown'?55:105):0;
   const fallAmount=f.knockdown?clamp(Math.abs(f.ragAngle)/1.36,0,1):0;
-  ctx.save();ctx.translate(f.x,f.y);ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(f.knockdownDirection*fallAmount*72,15,62+fallAmount*70,15+fallAmount*3,0,0,Math.PI*2);ctx.fill();ctx.translate(0,bob-throwLift);if(f.throwType)ctx.rotate(f.facing*Math.sin(throwProgress*Math.PI)*(f.throwType==='suplex'?1.35:.65));if(f.ragAngle)ctx.rotate(f.ragAngle);ctx.scale(f.facing*look.width,look.height);if(f.flash>0){ctx.globalCompositeOperation='screen';ctx.filter='brightness(2.5)';}
+  ctx.save();ctx.translate(f.x,f.y);ctx.fillStyle='rgba(0,0,0,.35)';ctx.beginPath();ctx.ellipse(f.knockdownDirection*fallAmount*72,15,62+fallAmount*70,15+fallAmount*3,0,0,Math.PI*2);ctx.fill();ctx.translate(0,bob-throwLift);if(f.throwType)ctx.rotate(f.facing*Math.sin(throwProgress*Math.PI)*(f.throwType==='suplex'?1.35:.65));if(f.ragAngle)ctx.rotate(f.ragAngle);ctx.scale(f.facing*look.width,look.height);if(f.flash>0){ctx.globalCompositeOperation='screen';}
   let lean=f.state==='hurt'?0:f.state==='block'?-0.08:special&&chargeMove?.32:special&&grappleMove?.2:f.state==='cross'?.08:f.state==='heavyKick'?.12:walking?clamp(f.vx/1500,-.1,.1):0;if(special&&spinMove)lean+=Math.sin(phase*18)*.08;ctx.rotate(lean);
   const pulse=move?Math.sin(Math.min(1,phase/move.duration)*Math.PI):0;
   const basicKick=f.state==='kick'||f.state==='heavyKick',legacyKick=special&&kickMove&&phase>.15,kick=basicKick||legacyKick;
@@ -954,7 +954,7 @@ function drawFighter(f,t=performance.now()/1000){
   const bob=settings.fluidMotion?(moving?Math.abs(stride)*3.5:0):0;
   ctx.save();ctx.translate(f.x,f.y);ctx.fillStyle='rgba(0,0,0,.38)';ctx.beginPath();ctx.ellipse(f.knockdownDirection*fallAmount*72,15,64+fallAmount*72,15+fallAmount*3,0,0,Math.PI*2);ctx.fill();
   ctx.translate(f.throwType?f.facing*Math.sin(throwProgress*Math.PI)*42:0,bob-throwLift);if(f.throwType)ctx.rotate(f.facing*throwArc*(f.throwType==='suplex'?2.25:f.throwType==='bodySlam'?1.45:.92));if(f.ragAngle)ctx.rotate(f.ragAngle);ctx.scale(f.facing*look.width,look.height);
-  if(f.flash>0){ctx.globalCompositeOperation='screen';ctx.filter='brightness(2.35)';}
+  if(f.flash>0){ctx.globalCompositeOperation='screen';}
   let lean=f.state==='block'?-.07:special&&legacy==='shoulderCharge'?.3:special&&['groundSlam','bodySlam','suplex','takedown'].includes(legacy)?.18:f.state==='cross'?.07:f.state==='heavyKick'?.11:moving?clamp(f.vx/1700,-.08,.08):0;if(special&&legacy==='spinAttack')lean+=Math.sin(f.stateTime*18)*.16;if(special&&['spinKick','roundhouse','counterKick'].includes(legacy))lean-=Math.sin(clamp(f.stateTime/ATTACKS.special.duration,0,1)*Math.PI)*.18;ctx.rotate(lean);
   const skin=f.data.skin,backSkin=skin;
   drawRigChain(pose.backHip,pose.backKnee,pose.backFoot,28,24,16,backSkin);drawRigFoot(f.data,pose.backFoot);
