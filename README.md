@@ -41,7 +41,7 @@ Rooms expire after two hours without activity and are cleaned up by alarms. Toke
 
 ## Releases
 
-Keep future updates in `face6off/legacy-fighters`; do not create a repository per version. Update the package version and game update log, validate the API and browser gameplay, and publish a GitHub release with a matching tag (for example `v1.8.0`). Version-tag pushes trigger the release workflow after Cloudflare and Pages are configured. Live multiplayer is available only after that deployment succeeds; a GitHub source release alone does not start a server. Preserve historical release tags.
+Keep future updates in `face6off/legacy-fighters`; do not create a repository per version. Update the package version and game update log, validate the API and browser gameplay, and publish a GitHub release with a matching tag (for example `v1.8.0`). Version-tag pushes trigger verification and deployment where the Pages environment allows tags. If Pages permits only `main`, run **Verify and publish** on `main` and enter the existing release tag in `release_tag` to deploy and attach its configured game ZIP. Live multiplayer is available only after that deployment succeeds; a GitHub source release alone does not start a server. Preserve historical release tags.
 
 ## Main files
 

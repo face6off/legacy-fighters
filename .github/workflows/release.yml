@@ -4,6 +4,11 @@ on:
   push:
     tags: ['v*']
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to receive the game ZIP
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -63,15 +68,20 @@ jobs:
         env:
           MULTIPLAYER_API_URL: ${{ steps.worker.outputs.url }}
         run: node scripts/package-site.mjs
+      - name: Select download name
+        env:
+          REQUESTED_RELEASE: ${{ inputs.release_tag }}
+        run: |
+          echo "DOWNLOAD_TAG=${REQUESTED_RELEASE:-$GITHUB_REF_NAME}" >> "$GITHUB_ENV"
       - name: Package downloadable game
         run: |
           cd dist/site
-          zip -r ../legacy-fighters-${GITHUB_REF_NAME}.zip .
+          zip -r ../legacy-fighters-${DOWNLOAD_TAG}.zip .
       - name: Attach game to release
-        if: startsWith(github.ref, 'refs/tags/')
+        if: startsWith(github.ref, 'refs/tags/') || inputs.release_tag != ''
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "$GITHUB_REF_NAME" "dist/legacy-fighters-${GITHUB_REF_NAME}.zip" --clobber
+        run: gh release upload "$DOWNLOAD_TAG" "dist/legacy-fighters-${DOWNLOAD_TAG}.zip" --clobber
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
