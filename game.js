@@ -21,7 +21,8 @@ const stageScreen = $('#stageScreen');
 const stageGrid = $('#stageGrid');
 const gameScreen = $('#gameScreen');
 const canvas = $('#game');
-const ctx = canvas.getContext('2d');
+let ctx = canvas.getContext('2d');
+const portraitCache = new WeakMap();
 const roundBanner = $('#roundBanner');
 const resultDialog = $('#resultDialog');
 const leaveMatchDialog = $('#leaveMatchDialog');
@@ -219,8 +220,29 @@ function careerPointsRemaining(){return CAREER_CREATION_POINTS-CAREER_STAT_KEYS.
 function careerDraftProfile(){
   return {name:$('#careerNameInput').value||'Legacy Rookie',level:1,xp:0,skillPoints:0,completedTournamentLevel:0,stats:{...creatorStats},appearance:{hairStyle:$('#careerHairSelect').value||'crew',beard:$('#careerBeardSelect').value||'none',bodyType:$('#careerBodySelect').value||'balanced',heightCm:Number($('#careerHeightInput').value)||178,weightLb:Number($('#careerWeightInput').value)||185,skin:$('#careerSkinColor').value,hair:$('#careerHairColor').value,outfit:$('#careerOutfitColor').value,accent:$('#careerAccentColor').value}};
 }
+// Render portraits once with the combat rig so every build and accessory stays aligned.
+function fighterPortrait(data){
+  if(portraitCache.has(data))return portraitCache.get(data);
+  const portrait=document.createElement('canvas');portrait.width=320;portrait.height=340;
+  const combatContext=ctx;
+  try {
+    // Canvas drawing is synchronous; always restore the combat target before returning.
+    ctx=portrait.getContext('2d');
+    ctx.scale(1.35,1.35);
+    const fighter=new Fighter(data,320/2/1.35,1);fighter.y=325;fighter.stepPhase=0;
+    drawFighter(fighter,0);
+  } finally {ctx=combatContext;}
+  const image=portrait.toDataURL();portraitCache.set(data,image);return image;
+}
+function renderPortrait(element,data){
+  element.replaceChildren();
+  const image=document.createElement('img');image.className='portrait-image';image.alt='';image.src=fighterPortrait(data);
+  element.append(image);
+}
+
 function applyCareerPortrait(element,fighter){
   if(!element||!fighter)return;
+  renderPortrait(element.querySelector('.portrait'),fighter);
   element.className=`career-portrait fighter-card look-${fighter.look.hairStyle} beard-${fighter.look.beard} accessory-none gear-${fighter.look.gear}`;
   for(const [name,value] of [['--color',fighter.color],['--accent',fighter.accent],['--skin',fighter.skin],['--hair',fighter.hair],['--body-scale',fighter.look.width],['--height-scale',fighter.look.height]])element.style.setProperty(name,value);
 }
@@ -302,7 +324,7 @@ function setLegacyControlEnabled(enabled){const button=document.querySelector('[
 function renderRoster() {
   rosterEl.innerHTML = ROSTER.map(f => `
     <button class="fighter-card ${f.id === selected.id ? 'selected' : ''} look-${f.look.hairStyle} beard-${f.look.beard} accessory-${f.look.accessory || 'none'} gear-${f.look.gear}" data-id="${f.id}" style="--color:${f.color};--accent:${f.accent};--skin:${f.skin};--hair:${f.hair};--body-scale:${f.look.width};--height-scale:${f.look.height}">
-      <span class="portrait" aria-hidden="true"><i class="portrait-hair"></i><i class="portrait-beard"></i><i class="portrait-moustache"></i><i class="portrait-accessory"></i><i class="portrait-belt"></i><i class="portrait-gear portrait-gear-left"></i><i class="portrait-gear portrait-gear-right"></i></span>
+      <span class="portrait" aria-hidden="true"><img class="portrait-image" src="${fighterPortrait(f)}" alt="" /></span>
       <span class="card-shade"></span>
       <span class="card-info"><span>${f.style}</span><strong>${f.name}</strong></span>
     </button>`).join('');
@@ -926,8 +948,8 @@ function drawRigTorso(data,pose){
   ctx.strokeStyle='rgba(255,255,255,.13)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-27,-163);ctx.quadraticCurveTo(-11,-151,0,-154);ctx.quadraticCurveTo(12,-151,27,-163);ctx.moveTo(0,-145);ctx.lineTo(0,-109);ctx.stroke();
 }
 
-function drawFighter(f){
-  const t=performance.now()/1000,{pose,pulse,special,legacy,moving,stride}=buildRigPose(f,t),look=f.data.look;
+function drawFighter(f,t=performance.now()/1000){
+  const {pose,pulse,special,legacy,moving,stride}=buildRigPose(f,t),look=f.data.look;
   const throwProgress=f.throwType?Math.min(1,f.throwTime/.92):0,throwArc=f.throwType?Math.sin(throwProgress*Math.PI):0,throwLift=f.throwType?throwArc*(f.throwType==='takedown'?70:130):0,fallAmount=f.knockdown?clamp(Math.abs(f.ragAngle)/1.36,0,1):0;
   const bob=settings.fluidMotion?(moving?Math.abs(stride)*3.5:0):0;
   ctx.save();ctx.translate(f.x,f.y);ctx.fillStyle='rgba(0,0,0,.38)';ctx.beginPath();ctx.ellipse(f.knockdownDirection*fallAmount*72,15,64+fallAmount*72,15+fallAmount*3,0,0,Math.PI*2);ctx.fill();

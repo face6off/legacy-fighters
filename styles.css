@@ -161,7 +161,7 @@ button { font: inherit; }
 .creator-preview-panel > p { margin: 14px 6px 2px; color: var(--muted); font-size: .77rem; line-height: 1.5; }
 .career-portrait { width: 100%; min-height: 370px; cursor: default; --color:#3a52b8;--accent:#ffd23f;--skin:#b97a56;--hair:#241914;--body-scale:1.02;--height-scale:1.01; }
 .career-portrait:hover { transform: none; border-color: var(--line); }
-.career-portrait > .portrait { inset: 38px 0 0; transform: scale(1.55); transform-origin: 50% 12%; }
+.career-portrait > .portrait { inset: 0; }
 .career-portrait .card-info { min-height: 66px; padding: 12px 16px; }
 .career-portrait .card-info strong { font-size: 1.55rem; }
 .creator-controls { display: grid; gap: 18px; }
@@ -234,48 +234,7 @@ h1 { font-size: clamp(3.2rem, 8vw, 6.7rem); letter-spacing: -.035em; text-shadow
 .fighter-card:hover { transform: translateY(-4px); border-color: rgba(255,210,63,.6); }
 .fighter-card.selected { border: 2px solid var(--gold); box-shadow: 0 0 0 3px rgba(255,210,63,.16), 0 16px 40px rgba(0,0,0,.35); }
 .portrait { position: absolute; inset: 0; opacity: 1; }
-.portrait::before { content: ''; position: absolute; width: 78px; height: 78px; border-radius: 50%; top: 21px; left: 50%; transform: translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale)); transform-origin: center bottom; background: var(--skin); box-shadow: inset -13px -7px 0 rgba(0,0,0,.16); }
-.portrait::after { content: ''; position: absolute; width: 112px; height: 94px; border-radius: 50% 50% 12% 12%; top: 80px; left: 50%; transform: translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale)); transform-origin: bottom; background: var(--color); box-shadow: inset -18px 0 0 rgba(0,0,0,.18); }
-.portrait-hair { position: absolute; width: 74px; height: 30px; border-radius: 50% 50% 20% 20%; top: 16px; left: 50%; transform: translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale)); transform-origin:center bottom; background: repeating-linear-gradient(105deg,transparent 0 5px,rgba(255,255,255,.11) 6px,transparent 8px),linear-gradient(150deg,color-mix(in srgb,var(--hair) 80%,white),var(--hair) 52%,color-mix(in srgb,var(--hair) 72%,black)); box-shadow:inset -9px -4px 10px rgba(0,0,0,.28); z-index: 2; }
-.portrait-beard { position:absolute; z-index:4; left:50%; top:65px; transform:translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale)); transform-origin:center top; background:var(--hair); }
-.portrait-moustache { display:none;position:absolute;z-index:6;width:44px;height:11px;left:50%;top:64px;transform:translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale));transform-origin:center;background:var(--hair);border-radius:50% 50% 43% 43%;clip-path:polygon(0 32%,19% 3%,48% 38%,52% 38%,81% 3%,100% 32%,88% 88%,54% 62%,50% 75%,46% 62%,12% 88%);filter:drop-shadow(0 2px 1px rgba(0,0,0,.25)); }
-.portrait-accessory { position:absolute; z-index:5; left:50%; transform:translateX(-50%) scaleX(var(--body-scale)) scaleY(var(--height-scale)); transform-origin:center; }
-.portrait-belt { display:none;position:absolute;z-index:3;left:50%;top:130px;width:78px;height:10px;transform:translateX(-50%) scaleX(var(--body-scale)); }
-.portrait-gear { display:none;position:absolute;z-index:4;top:99px;width:20px;height:39px;background:var(--skin);border-radius:45% 45% 42% 42%;box-shadow:inset -4px -2px 0 rgba(0,0,0,.16); }
-.portrait-gear-left { left:calc(50% - 67px);transform:rotate(14deg) scaleX(var(--body-scale)); }
-.portrait-gear-right { right:calc(50% - 67px);transform:rotate(-14deg) scaleX(var(--body-scale)); }
-.look-bald .portrait-hair { display:none; }
-.look-crew .portrait-hair, .look-blondcrew .portrait-hair { width:67px;height:22px;top:15px;border-radius:50% 50% 18% 18% / 75% 75% 25% 25%;clip-path:polygon(3% 34%,12% 13%,31% 3%,67% 4%,89% 16%,98% 38%,91% 89%,76% 77%,62% 91%,45% 77%,27% 91%,10% 76%); }
-.look-manbun .portrait-hair { width:72px;height:34px;top:11px;border-radius:52% 55% 28% 30% / 75% 78% 26% 30%; }
-.look-manbun .portrait-hair::after { content:'';position:absolute;width:27px;height:27px;border-radius:46% 54% 49% 51%;background:repeating-radial-gradient(circle at 60% 45%,color-mix(in srgb,var(--hair) 76%,white) 0 2px,var(--hair) 3px 6px);left:-11px;top:-8px;box-shadow:0 0 0 3px var(--accent),inset -5px -4px 7px rgba(0,0,0,.35); }
-.look-highfade .portrait-hair { width:59px;height:40px;top:2px;border-radius:45% 48% 20% 20% / 55% 58% 22% 22%;background:radial-gradient(circle at 20% 22%,color-mix(in srgb,var(--hair) 68%,white) 0 3px,transparent 4px),radial-gradient(circle at 52% 18%,color-mix(in srgb,var(--hair) 72%,white) 0 4px,transparent 5px),radial-gradient(circle at 78% 28%,color-mix(in srgb,var(--hair) 70%,white) 0 3px,transparent 4px),linear-gradient(var(--hair),color-mix(in srgb,var(--hair) 76%,black));background-size:18px 17px,21px 18px,18px 19px,auto; }
-.look-closecrop .portrait-hair { width:69px;height:15px;top:20px;border-radius:50% 50% 22% 22% / 85% 85% 15% 15%;opacity:.9;background:repeating-linear-gradient(95deg,var(--hair) 0 2px,color-mix(in srgb,var(--hair) 65%,white) 3px,var(--hair) 5px); }
-.look-sideswept .portrait-hair { width:75px;height:37px;top:8px;border-radius:70% 35% 35% 25% / 75% 60% 35% 26%;clip-path:polygon(0 74%,5% 42%,16% 18%,37% 2%,65% 8%,98% 29%,88% 53%,72% 45%,57% 63%,39% 48%,21% 78%); }
-.look-flat .portrait-hair { width:69px;height:22px;top:14px;border-radius:10px 10px 28px 26px / 5px 5px 16px 18px;clip-path:polygon(3% 10%,95% 5%,100% 55%,90% 83%,70% 72%,50% 94%,28% 76%,8% 88%,0 48%); }
-.look-spikes .portrait-hair { width:75px;height:39px;top:0;clip-path:polygon(0 100%,4% 52%,13% 70%,20% 18%,29% 63%,39% 4%,49% 59%,59% 11%,69% 65%,80% 16%,87% 69%,97% 43%,100% 100%);filter:drop-shadow(0 3px 2px rgba(0,0,0,.3)); }
-.look-sweptback .portrait-hair { width:76px;height:39px;top:6px;border-radius:62% 34% 25% 25% / 70% 55% 30% 25%;clip-path:polygon(0 76%,6% 40%,18% 14%,42% 0,76% 6%,100% 25%,89% 49%,72% 42%,57% 59%,38% 47%,20% 74%); }
-.look-shaggyblond .portrait-hair { width:88px;height:58px;top:3px;border-radius:58% 48% 34% 32% / 70% 66% 46% 44%;clip-path:polygon(0 38%,8% 14%,25% 2%,47% 9%,66% 0,91% 18%,100% 43%,91% 76%,78% 58%,68% 98%,53% 64%,39% 94%,28% 59%,12% 83%,4% 61%);filter:drop-shadow(0 4px 2px rgba(0,0,0,.32)); }
-.look-shortcurl .portrait-hair { width:68px;height:18px;top:18px;border-radius:50% 50% 22% 22% / 90% 90% 18% 18%;background:radial-gradient(circle at 20% 45%,color-mix(in srgb,var(--hair) 70%,white) 0 2px,transparent 3px),radial-gradient(circle at 52% 35%,color-mix(in srgb,var(--hair) 72%,white) 0 2px,transparent 3px),radial-gradient(circle at 80% 48%,color-mix(in srgb,var(--hair) 68%,white) 0 2px,transparent 3px),var(--hair);background-size:12px 10px,13px 11px,12px 10px,auto; }
-.look-mane .portrait-hair { width:88px;height:66px;top:4px;border-radius:50% 50% 30% 30% / 38% 38% 62% 62%;clip-path:polygon(3% 9%,18% 1%,36% 8%,51% 0,68% 8%,88% 2%,98% 22%,91% 47%,99% 72%,82% 66%,75% 100%,58% 72%,49% 96%,37% 71%,17% 99%,13% 66%,0 71%,8% 45%); }
-.look-twists .portrait-hair { width:73px;height:37px;top:7px;border-radius:48% 48% 18% 18%;background:radial-gradient(ellipse at 15% 35%,color-mix(in srgb,var(--hair) 76%,white) 0 6px,transparent 7px),radial-gradient(ellipse at 38% 17%,var(--hair) 0 7px,transparent 8px),radial-gradient(ellipse at 62% 18%,color-mix(in srgb,var(--hair) 70%,white) 0 7px,transparent 8px),radial-gradient(ellipse at 84% 36%,var(--hair) 0 6px,transparent 7px),radial-gradient(ellipse at 30% 69%,var(--hair) 0 7px,transparent 8px),radial-gradient(ellipse at 58% 67%,color-mix(in srgb,var(--hair) 74%,white) 0 7px,transparent 8px),radial-gradient(ellipse at 78% 72%,var(--hair) 0 6px,transparent 7px); }
-.beard-goatee .portrait-beard { width:22px;height:27px;top:64px;border-radius:42% 42% 55% 55% / 15% 15% 85% 85%;background:repeating-linear-gradient(82deg,transparent 0 3px,rgba(255,255,255,.1) 4px,transparent 5px),var(--hair); }
-.beard-full .portrait-beard { width:68px;height:45px;top:55px;border-radius:30% 30% 48% 48% / 18% 18% 78% 78%;background:repeating-linear-gradient(80deg,transparent 0 4px,rgba(255,255,255,.10) 5px,transparent 7px),var(--hair);box-shadow:inset -9px -5px 10px rgba(0,0,0,.2);clip-path:polygon(2% 2%,15% 8%,22% 33%,33% 51%,42% 47%,50% 58%,58% 48%,68% 52%,79% 34%,86% 8%,98% 2%,96% 57%,85% 78%,69% 91%,51% 100%,32% 92%,15% 78%,4% 57%); }
-.beard-full .portrait-beard::before { content:'';position:absolute;z-index:2;width:39px;height:22px;left:50%;top:-1px;transform:translateX(-50%);border-radius:0 0 52% 52% / 0 0 70% 70%;background:var(--skin); }
-.beard-moustache .portrait-beard { display:none; }
-.beard-trim .portrait-beard, .beard-stubble .portrait-beard { width:61px;height:30px;top:67px;border-radius:8% 8% 48% 48% / 8% 8% 85% 85%;clip-path:polygon(1% 0,14% 7%,22% 46%,36% 72%,50% 88%,65% 71%,79% 45%,87% 7%,99% 0,95% 55%,78% 82%,51% 100%,23% 82%,5% 56%);background:repeating-linear-gradient(76deg,transparent 0 2px,rgba(255,255,255,.08) 3px,transparent 5px),var(--hair);opacity:.72; }
-.beard-stubble .portrait-beard { opacity:.34; }
-.beard-full .portrait-moustache,.beard-goatee .portrait-moustache,.beard-trim .portrait-moustache,.beard-moustache .portrait-moustache { display:block; }
-.gear-headband .portrait-accessory { width:76px;height:5px;top:47px;background:var(--accent);box-shadow:-22px 9px 0 -1px var(--accent); }
-.accessory-mask .portrait-accessory { width:76px;height:42px;top:43px;border-radius:38% 38% 46% 46% / 25% 25% 65% 65%;background:linear-gradient(135deg,#35d9ed 0 32%,#6c35d9 33% 64%,#ef4d9b 65%);clip-path:polygon(2% 5%,24% 0,50% 14%,76% 0,98% 5%,91% 62%,72% 100%,50% 76%,28% 100%,9% 62%);box-shadow:inset 0 0 0 4px #f8e84d; }
-.accessory-mask .portrait-accessory::after { content:'';position:absolute;left:13px;right:13px;top:15px;height:8px;background:var(--skin);clip-path:polygon(0 20%,35% 0,45% 55%,55% 55%,65% 0,100% 20%,91% 100%,66% 67%,34% 67%,9% 100%); }
-.accessory-bandana .portrait-accessory { width:82px;height:16px;top:29px;border-radius:44% 44% 24% 24%;background:radial-gradient(ellipse at 16% 45%,transparent 0 2px,#ead9ad 3px 4px,transparent 5px),radial-gradient(ellipse at 48% 48%,transparent 0 2px,#ead9ad 3px 4px,transparent 5px),radial-gradient(ellipse at 80% 42%,transparent 0 2px,#ead9ad 3px 4px,transparent 5px),#6f1830;background-size:24px 15px;box-shadow:inset 0 -3px 0 rgba(0,0,0,.25); }
-.accessory-bandana .portrait-accessory::after { content:'';position:absolute;width:29px;height:31px;left:-16px;top:8px;background:#6f1830;clip-path:polygon(36% 0,100% 8%,62% 100%,45% 45%,0 81%);filter:drop-shadow(0 2px 0 #ead9ad); }
-.gear-gloves .portrait-gear,.gear-fightgloves .portrait-gear,.gear-wristbands .portrait-gear,.gear-bands .portrait-gear,.gear-armbands .portrait-gear { display:block; }
-.gear-gloves .portrait-gear { width:27px;height:25px;top:104px;background:var(--accent);border:3px solid var(--color);border-radius:48%; }
-.gear-fightgloves .portrait-gear { width:25px;height:23px;top:105px;background:#202029;border:3px solid var(--color);border-radius:48%; }
-.gear-wristbands .portrait-gear,.gear-bands .portrait-gear,.gear-armbands .portrait-gear { border-bottom:8px solid var(--accent); }
-.gear-armbands .portrait-gear { border-top:6px solid var(--accent); }
-.gear-belt .portrait-belt { display:block;border:2px solid color-mix(in srgb,var(--accent) 75%,white);background:var(--accent); }
+.portrait-image { display:block; width:100%; height:100%; object-fit:cover; object-position:center top; }
 .card-shade { position: absolute; inset: 63% 0 0; background: linear-gradient(transparent, rgba(4,3,9,.98) 67%); z-index: 4; }
 .card-info { position: absolute; z-index: 5; inset: auto 10px 10px; text-align: left; }
 .card-info strong { display: block; font: italic 800 1.28rem/1 Barlow Condensed, sans-serif; text-transform: uppercase; }
@@ -473,9 +432,6 @@ dialog h2 { font-size: 3.2rem; margin-bottom: 25px; }
   .stage-card { min-height: 150px; }
   .stage-actions { flex-direction: column-reverse; }
   .stage-actions .fight-btn,.stage-actions .secondary-btn { width: min(100%,300px); }
-  .portrait::before { width: 62px; height: 62px; }
-  .portrait::after { width: 92px; top: 69px; }
-  .portrait-hair { width: 60px; }
   .card-info strong { font-size: 1rem; }
   .fighter-detail { grid-template-columns: 1fr; }
   .select-actions { flex-direction:column-reverse; align-items:center; }
