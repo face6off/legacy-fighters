@@ -1,4 +1,4 @@
-import { ATTACKS, clamp } from './game-data.js';
+import { ATTACKS, clamp } from './game-data.js?v=1.9.0';
 
 export function hitPoseAngle(fighter) {
   if (fighter.throwType) return 0;

@@ -29,6 +29,13 @@ const api = process.env.MULTIPLAYER_API_URL || 'http://127.0.0.1:8787';
       await page.route('**/game.js*', async route => {
         const response = await route.fetch();
         await route.fulfill({ response, body: (await response.text()) + `
+          window.prepareNetworkCombo = () => {
+            startDelay=0;player.x=500;cpu.x=615;player.vx=cpu.vx=0;
+            player.health=player.maxHealth=cpu.health=cpu.maxHealth=1000;
+            player.state=cpu.state='idle';player.cooldown=cpu.cooldown=0;
+            player.stamina=player.maxStamina;cpu.stamina=cpu.maxStamina;
+          };
+          window.networkComboResult = () => ({ name:cpu.comboName, ack:cpu.lastResolvedAttackSequence, health:player.health });
           window.checkNetworkReconciliation = () => {
             const fighter = new Fighter(ROSTER[1], 500, 1);
             const idle = fighterSnapshot(fighter);
@@ -82,6 +89,14 @@ const api = process.env.MULTIPLAYER_API_URL || 'http://127.0.0.1:8787';
     await guest.click('#fightBtn');
     await host.click('#stageFightBtn');
     for (const page of pages) await page.locator('#gameScreen').waitFor({ state: 'visible' });
+    await host.evaluate(() => window.prepareNetworkCombo());
+    await guest.waitForTimeout(600);
+    await guest.keyboard.press('f');await guest.waitForTimeout(90);
+    await guest.keyboard.press('f');await guest.waitForTimeout(90);
+    await guest.keyboard.press('g');
+    await host.waitForFunction(() => window.networkComboResult().name === 'Triple Strike');
+    const comboResult = await host.evaluate(() => window.networkComboResult());
+    assert.ok(comboResult.ack >= 3 && comboResult.health < 1000);
     await guest.keyboard.down('a');
     await guest.waitForTimeout(500);
     await guest.keyboard.up('a');
@@ -129,6 +144,6 @@ const api = process.env.MULTIPLAYER_API_URL || 'http://127.0.0.1:8787';
     // Leaving deletes the room; the remaining guest's poll may legitimately
     // receive 404. Assert all unexpected failures before teardown separately.
     assert.ok(failed.every(status => status === 404), JSON.stringify(failed));
-    console.log('Browser smoke passed: two-player gameplay, host/guest reconnect, finished-room recovery, rematch and classic pause/resume.');
+    console.log('Browser smoke passed: host-validated buffered combo with delayed guest updates, two-player gameplay, host/guest reconnect, finished-room recovery, rematch and classic pause/resume.');
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

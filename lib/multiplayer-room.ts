@@ -138,6 +138,7 @@ export function cleanInput(value: unknown) {
     right: input.right === true,
     block: input.block === true,
     attackAction,
+    attackEvents: Array.isArray(input.attackEvents) ? input.attackEvents.slice(-8).filter((event:any) => event && Number.isSafeInteger(event.sequence) && event.sequence > 0 && event.sequence <= 1_000_000_000 && attackActions.has(event.action)).map((event:any) => ({sequence:event.sequence,action:event.action})).sort((a:any,b:any)=>a.sequence-b.sequence) : [],
     attackSequence: Math.max(0, Math.min(1_000_000_000, Number(input.attackSequence) || 0)),
   };
 }

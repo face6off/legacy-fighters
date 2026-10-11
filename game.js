@@ -1,6 +1,7 @@
-import { hitPoseAngle, snapshotVisualState, reconcileSnapshotVisuals } from './fighter-visuals.js?v=1.81.3';
+import { COMBOS, COMBO_BUFFER_SECONDS, comboPrefix, completedCombo, comboDamageScale, attackMotion } from './combos.js?v=1.9.0';
+import { hitPoseAngle, snapshotVisualState, reconcileSnapshotVisuals } from './fighter-visuals.js?v=1.9.0';
 import { multiplayerRequest } from './multiplayer-client.js';
-import { ROSTER, STAGES, ATTACKS, clamp, attackDamage, shouldKnockdown, canStrike, selectCpu, resolveFacingDirection } from './game-data.js';
+import { ROSTER, STAGES, ATTACKS, clamp, attackDamage, shouldKnockdown, canStrike, selectCpu, resolveFacingDirection } from './game-data.js?v=1.9.0';
 import { LEGACY_TOTAL_ROUNDS, createLegacyRun, legacyRewardOptions, applyLegacyReward, buildCounterFighter } from './legacy-mode.js';
 import { CAREER_STAT_KEYS, CAREER_BASE_STAT, CAREER_CREATION_POINTS, CAREER_MAX_STAT, CAREER_HAIR_STYLES, CAREER_BEARD_STYLES, CAREER_BODY_TYPES, xpForNextLevel, createCareerProfile, normalizeCareerProfile, gainCareerXp, spendCareerPoint, nextTournamentMilestone, tournamentAvailable, arenaOpponentLevel, tournamentOpponentLevel, fighterFromCareerProfile, generateCareerOpponent, generateCareerBoss, careerFightXp } from './career-mode.js';
 
@@ -59,20 +60,20 @@ let careerProfile=loadCareerProfile(),careerRun=null,creatorStats=Object.fromEnt
 const NETWORK_TICK_MS=40,ROOM_SESSION_KEY='legacyFightersMultiplayerRoom:' + String(window.LEGACY_FIGHTERS_CONFIG?.multiplayerApiUrl || '').trim();
 const network={
   code:null,token:null,role:null,room:null,pollTimer:0,syncPending:false,syncQueued:false,
-  nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,
+  nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,attackEvents:[],remoteAttackSequence:0,
   snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,
   consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,guestAttackAck:0,attackSentInputSequence:0,stageSelectDismissed:false
 };
 
 const TITLE_LEAD_SECONDS=2;
 const TITLE_TRACKS=[
-  {src:'assets/audio/title-theme.mp3?v=1.81.0',drop:15},
-  {src:'assets/audio/quebec.mp3?v=1.81.0',drop:24.65},
-  {src:'assets/audio/love-scars-2.mp3?v=1.81.0',drop:11.95},
-  {src:'assets/audio/zoom.mp3?v=1.81.0',drop:12.05},
-  {src:'assets/audio/heatin-up.mp3?v=1.81.0',drop:14.75},
-  {src:'assets/audio/whoopty-doo.mp3?v=1.81.0',drop:10.4},
-  {src:'assets/audio/ttg.mp3?v=1.81.0',drop:11.7}
+  {src:'assets/audio/title-theme.mp3?v=1.9.0',drop:15},
+  {src:'assets/audio/quebec.mp3?v=1.9.0',drop:24.65},
+  {src:'assets/audio/love-scars-2.mp3?v=1.9.0',drop:11.95},
+  {src:'assets/audio/zoom.mp3?v=1.9.0',drop:12.05},
+  {src:'assets/audio/heatin-up.mp3?v=1.9.0',drop:14.75},
+  {src:'assets/audio/whoopty-doo.mp3?v=1.9.0',drop:10.4},
+  {src:'assets/audio/ttg.mp3?v=1.9.0',drop:11.7}
 ];
 const INTRO_TRACK_STORAGE_KEY='legacyFightersLastIntroTrackV1';
 let activeIntroTrack=null,activeIntroStart=0,introPlaybackStartedAt=0;
@@ -192,6 +193,7 @@ function showOnly(screen){[startScreen,modeScreen,multiplayerScreen,careerSlotsS
 function renderControlHelp(){
   const entries=Object.entries(CONTROL_META);
   $('#controlGrid').innerHTML=entries.map(([action,meta])=>`<div><kbd>${displayKey(settings.keybinds[action])}</kbd><strong>${meta.label}</strong><small>${meta.description}</small></div>`).join('');
+  $('#comboGuide').innerHTML=COMBOS.map(combo=>`<div><strong>${combo.name}</strong><span>${combo.actions.map(action=>`<kbd>${displayKey(settings.keybinds[action])}</kbd>`).join(' → ')}</span></div>`).join('');
   $('#gameFooter').innerHTML=[['left','right','MOVE'],['shove',null,'SHOVE'],['jab',null,'JAB'],['cross',null,'POWER PUNCH'],['kick',null,'KICK'],['heavyKick',null,'POWER KICK'],['block',null,'BLOCK'],['special',null,'LEGACY MOVE']].map(([a,b,label])=>`<span><kbd>${displayKey(settings.keybinds[a])}</kbd>${b?`<kbd>${displayKey(settings.keybinds[b])}</kbd>`:''} ${label}</span>`).join('');
 }
 
@@ -377,7 +379,7 @@ function saveRoomSession(){
 function clearRoomSession(){localStorage.removeItem(ROOM_SESSION_KEY);}
 function stopRoomPoll(){clearTimeout(network.pollTimer);network.pollTimer=0;}
 function resetNetworkState(){
-  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,guestAttackAck:0,attackSentInputSequence:0,stageSelectDismissed:false});
+  stopRoomPoll();Object.assign(network,{code:null,token:null,role:null,room:null,syncPending:false,syncQueued:false,nextSyncAt:0,inputSequence:0,attackSequence:0,attackAction:null,attackEvents:[],remoteAttackSequence:0,snapshotSequence:0,lastSnapshotSequence:0,targets:null,snapshotReceivedAt:0,resultShown:false,pendingFinalSnapshot:null,consecutiveErrors:0,pingMs:0,pingSamples:0,guestAck:0,guestAttackAck:0,attackSentInputSequence:0,stageSelectDismissed:false});
 }
 function updatePing(roundTrip){
   if(!Number.isFinite(roundTrip))return;
@@ -478,17 +480,54 @@ class Fighter {
     this.data=data; this.x=x; this.y=560; this.facing=facing; this.isCpu=isCpu;
     this.difficulty=difficulty;this.maxHealth=isCpu?Math.round(100+Math.max(0,difficulty-1)*70):100;this.health=this.maxHealth; this.meter=data.allowLegacy===false?0:20; this.maxStamina=65+data.stamina*5; this.stamina=this.maxStamina; this.staminaDelay=0;
     this.animationSequence=0;this.predictedAttackSequence=0;
+    this.comboSteps=[];this.comboBuffer=[];this.comboConfirmed=false;this.comboClock=0;this.comboLastInput=-Infinity;this.comboName='';this.comboHitCount=0;this.comboDisplayTime=0;this.lastResolvedAttackSequence=0;
     this.vx=0; this.state='idle'; this.stateTime=0; this.cooldown=0; this.hitDone=false; this.flash=0; this.blocking=false; this.aiWait=0;this.throwType=null;this.throwTime=0;
     this.ai=isCpu?createCpuProfile(data,difficulty):null;this.aiPlan='observe';this.aiPlanTime=0;this.aiReaction=0;this.aiAware=false;
     this.remoteControlled=false;this.remoteInput={};
     this.hurtDuration=.3;this.ragAngle=0;this.hitLean=.16;this.hitDirection=1;this.knockdown=false;this.knockdownDirection=1;this.stepPhase=Math.random()*Math.PI*2;this.shoveRoll=1;
   }
-  attack(kind) {
+  resetCombo(){
+    for(const input of this.comboBuffer)this.lastResolvedAttackSequence=Math.max(this.lastResolvedAttackSequence,input.sequence||0);
+    this.comboSteps=[];this.comboBuffer=[];this.comboConfirmed=false;
+  }
+  queueAttack(kind, sequence=0){
+    if(this.health<=0||this.state==='hurt'||this.blocking||startDelay>0)return false;
+    if(this.isAttacking()){
+      const planned=[...this.comboSteps,...this.comboBuffer.map(input=>input.kind),kind];
+      if(this.comboBuffer.length>=2||!comboPrefix(planned)||this.comboClock-this.comboLastInput>COMBO_BUFFER_SECONDS)return false;
+      this.comboBuffer.push({kind,sequence,expires:this.comboClock+COMBO_BUFFER_SECONDS});this.comboLastInput=this.comboClock;return true;
+    }
+    const chained=this.comboConfirmed&&this.comboClock-this.comboLastInput<=COMBO_BUFFER_SECONDS&&comboPrefix([...this.comboSteps,kind]);
+    const started=this.attack(kind,chained);
+    if(started){this.lastResolvedAttackSequence=Math.max(this.lastResolvedAttackSequence,sequence);this.comboLastInput=this.comboClock;}
+    return started;
+  }
+  advanceCombo(dt, predict=false){
+    this.comboClock+=dt;this.comboDisplayTime=Math.max(0,this.comboDisplayTime-dt);
+    if(this.state==='hurt'||this.blocking||this.health<=0){this.resetCombo();return;}
+    const move=ATTACKS[this.state];
+    if(!move)return;
+    if(this.comboBuffer.some(input=>input.expires<this.comboClock)){this.resetCombo();return;}
+    if(this.stateTime<move.activeEnd)return;
+    const connected=this.comboConfirmed||(predict&&canConnect(this,player)&&!player.blocking);
+    if(!connected){this.resetCombo();return;}
+    if(this.comboBuffer.length){
+      const input=this.comboBuffer.shift();
+      if(this.attack(input.kind,true))this.lastResolvedAttackSequence=Math.max(this.lastResolvedAttackSequence,input.sequence||0);
+      else {this.lastResolvedAttackSequence=Math.max(this.lastResolvedAttackSequence,input.sequence||0);this.resetCombo();}
+    }
+  }
+  attack(kind, chained=false) {
     const move=ATTACKS[kind];
-    if (!move || this.cooldown>0 || this.state==='hurt' || this.blocking || startDelay>0) return false;
+    if (!move || (!chained&&(this.cooldown>0||this.isAttacking())) || this.state==='hurt' || this.blocking || startDelay>0) return false;
     if (kind==='special' && (this.data.allowLegacy===false || this.meter<100)) return false;
-    if(this.stamina<move.stamina){if(!this.isCpu)beep(52,.08,'square');return false;}
-    this.stamina-=move.stamina;this.staminaDelay=move.duration+.18;
+    const steps=chained?[...this.comboSteps,kind]:[kind];
+    const cost=move.stamina*(1+.12*(steps.length-1));
+    if(chained&&!comboPrefix(steps))return false;
+    if(this.stamina<cost){if(!this.isCpu)beep(52,.08,'square');return false;}
+    if(!chained)this.resetCombo();
+    this.comboSteps=steps;this.comboConfirmed=false;
+    this.stamina-=cost;this.staminaDelay=move.duration+.18;
     this.animationSequence+=1;this.state=kind; this.stateTime=0; this.hitDone=false;if(kind==='shove')this.shoveRoll=Math.random();
     this.cooldown=move.cooldown;
     if(kind==='special') { this.meter=0; flashScreen(); beep(95,.18,'sawtooth'); }
@@ -498,7 +537,7 @@ class Fighter {
   isAttacking(){return Boolean(ATTACKS[this.state]);}
   isActive(){const move=ATTACKS[this.state];return Boolean(move&&!this.hitDone&&this.stateTime>=move.startup&&this.stateTime<=move.activeEnd);}
   update(dt, opponent) {
-    this.stateTime += dt; this.cooldown=Math.max(0,this.cooldown-dt); this.flash=Math.max(0,this.flash-dt);this.staminaDelay=Math.max(0,this.staminaDelay-dt);
+    this.stateTime += dt;this.advanceCombo(dt); this.cooldown=Math.max(0,this.cooldown-dt); this.flash=Math.max(0,this.flash-dt);this.staminaDelay=Math.max(0,this.staminaDelay-dt);
     this.stepPhase+=Math.abs(this.vx)*dt*.045;
     if(this.state==='hurt'||this.throwType)this.ragAngle=hitPoseAngle(this);
     else this.ragAngle*=Math.pow(.001,dt);
@@ -565,18 +604,19 @@ function createCpuProfile(data,difficulty=1){
 
 function controlledFighter(){return gameMode==='multiplayer'&&network.role==='guest'?cpu:player;}
 function performLocalAttack(action){
-  const fighter=controlledFighter(),started=fighter?.attack(action);
+  const fighter=controlledFighter(),started=fighter?.queueAttack(action);
   if(started&&gameMode==='multiplayer'){
     network.attackSequence+=1;network.attackAction=action;
+    network.attackEvents.push({sequence:network.attackSequence,action});network.attackEvents=network.attackEvents.slice(-8);
     if(network.role==='guest'){fighter.predictedAttackSequence=network.attackSequence;fighter.predictedAttackState=action;fighter.predictedAttackTime=0;network.attackSentInputSequence=0;}syncNetwork(true);
   }
   return started;
 }
-function localNetworkInput(){return {left:actionHeld('left'),right:actionHeld('right'),block:actionHeld('block'),attackAction:network.attackAction,attackSequence:network.attackSequence};}
+function localNetworkInput(){return {left:actionHeld('left'),right:actionHeld('right'),block:actionHeld('block'),attackAction:network.attackAction,attackSequence:network.attackSequence,attackEvents:network.attackEvents};}
 function fighterSnapshot(f){
-  return {animationSequence:f.animationSequence,x:f.x,vx:f.vx,facing:f.facing,health:f.health,maxHealth:f.maxHealth,stamina:f.stamina,maxStamina:f.maxStamina,meter:f.meter,state:f.state,stateTime:f.stateTime,cooldown:f.cooldown,blocking:f.blocking,flash:f.flash,hurtDuration:f.hurtDuration,ragAngle:f.ragAngle,hitLean:f.hitLean,hitDirection:f.hitDirection,knockdown:f.knockdown,knockdownDirection:f.knockdownDirection,throwType:f.throwType,throwTime:f.throwTime,stepPhase:f.stepPhase};
+  return {comboHitCount:f.comboHitCount,comboSteps:f.comboSteps,comboName:f.comboName,comboDisplayTime:f.comboDisplayTime,comboConfirmed:f.comboConfirmed,animationSequence:f.animationSequence,x:f.x,vx:f.vx,facing:f.facing,health:f.health,maxHealth:f.maxHealth,stamina:f.stamina,maxStamina:f.maxStamina,meter:f.meter,state:f.state,stateTime:f.stateTime,cooldown:f.cooldown,blocking:f.blocking,flash:f.flash,hurtDuration:f.hurtDuration,ragAngle:f.ragAngle,hitLean:f.hitLean,hitDirection:f.hitDirection,knockdown:f.knockdown,knockdownDirection:f.knockdownDirection,throwType:f.throwType,throwTime:f.throwTime,stepPhase:f.stepPhase};
 }
-function createNetworkSnapshot(ended=false,winner=null){return {player:fighterSnapshot(player),cpu:fighterSnapshot(cpu),timer,startDelay,ended,winner,guestAck:network.room?.guestSequence||0,guestAttackAck:network.remoteAttackSequence,serverTime:Date.now()};}
+function createNetworkSnapshot(ended=false,winner=null){return {player:fighterSnapshot(player),cpu:fighterSnapshot(cpu),timer,startDelay,ended,winner,guestAck:network.room?.guestSequence||0,guestAttackAck:cpu?.lastResolvedAttackSequence||0,serverTime:Date.now()};}
 function applySnapshotFighter(f,target,dt,localPrediction=false,preserveAction=false,snapshotAge=0){
   if(!target)return;
   const alignPrediction=localPrediction&&f.predictedAttackSequence>0&&network.guestAttackAck>=f.predictedAttackSequence;
@@ -584,7 +624,8 @@ function applySnapshotFighter(f,target,dt,localPrediction=false,preserveAction=f
   if(!preserveAction)f.predictedAttackSequence=0;
   const blend=Math.min(1,dt*(localPrediction?8:15));
   f.x+=(target.x-f.x)*blend;f.vx+=(target.vx-f.vx)*blend;f.health+=(target.health-f.health)*Math.min(1,dt*18);if(!preserveAction){f.stamina+=(target.stamina-f.stamina)*Math.min(1,dt*14);f.meter+=(target.meter-f.meter)*Math.min(1,dt*14);}
-  if(!preserveAction){f.state=target.state;f.stateTime=target.stateTime;}
+  if(!preserveAction){f.state=target.state;f.stateTime=target.stateTime;if(target.comboSteps)f.comboSteps=target.comboSteps.slice();f.comboConfirmed=Boolean(target.comboConfirmed);}
+  if(target.comboName){f.comboName=target.comboName;f.comboHitCount=target.comboHitCount||0;f.comboDisplayTime=Math.max(0,(target.comboDisplayTime||0)-snapshotAge);}
   if(preserveAction)f.cooldown=Math.max(f.cooldown,target.cooldown);
   for(const field of ['facing','maxHealth','maxStamina','cooldown','blocking','flash','hurtDuration','ragAngle','hitLean','hitDirection','knockdown','knockdownDirection','throwType','throwTime','stepPhase'])if(target[field]!==undefined&&!(preserveAction&&['cooldown','blocking'].includes(field)))f[field]=target[field];
 }
@@ -596,7 +637,7 @@ function acceptNetworkSnapshot(snapshot,sequence){
   // Older clients acknowledge the input request rather than the individual attack.
   const attackAck=Number.isSafeInteger(snapshot.guestAttackAck)?snapshot.guestAttackAck:
     (network.attackSentInputSequence>0&&network.guestAck>=network.attackSentInputSequence?network.attackSequence:0);
-  network.guestAttackAck=Math.max(network.guestAttackAck,attackAck);startDelay=snapshot.startDelay;
+  network.guestAttackAck=Math.max(network.guestAttackAck,attackAck);network.attackEvents=network.attackEvents.filter(event=>event.sequence>network.guestAttackAck);startDelay=snapshot.startDelay;
   if(snapshot.ended&&!network.resultShown){applySnapshotFighter(player,snapshot.player,1);applySnapshotFighter(cpu,snapshot.cpu,1);timer=snapshot.timer;showMultiplayerResult(snapshot.winner);}
 }
 function applyGuestNetworkFrame(dt){
@@ -613,8 +654,9 @@ function applyGuestNetworkFrame(dt){
   if(!attacking&&local.state!=='hurt'&&startDelay<=0){
     const axis=(actionHeld('right')?1:0)-(actionHeld('left')?1:0);local.blocking=actionHeld('block')&&local.stamina>0;const desired=axis*(170+local.data.speed*10)*(local.blocking?.45:1);local.vx+=(desired-local.vx)*Math.min(1,dt*13);local.x=clamp(local.x+local.vx*dt,90,1190);local.facing=resolveFacingDirection(local,player,axis);if(!axis)local.vx*=Math.pow(.08,dt);if(!network.targets)local.state=local.blocking?'block':Math.abs(local.vx)>.1?'walk':'idle';
   }
+  cpu.advanceCombo(dt,true);
   cpu.cooldown=Math.max(0,cpu.cooldown-dt);
-  if(cpu.predictedAttackSequence>0)cpu.predictedAttackTime+=dt;
+  if(cpu.predictedAttackSequence>0&&cpu.state===cpu.predictedAttackState)cpu.predictedAttackTime+=dt;
   for(const fighter of [player,cpu])if(fighter.isAttacking()||fighter.state==='hurt'){
     fighter.stateTime+=dt;
     const duration=ATTACKS[fighter.state]?.duration??fighter.hurtDuration;
@@ -636,7 +678,8 @@ async function syncNetwork(force=false){
     updatePing(performance.now()-requestStarted);
     if(network.role==='host'){
       const input=room.guestInput||{};cpu.remoteInput=input;
-      if(input.attackSequence>network.remoteAttackSequence){network.remoteAttackSequence=input.attackSequence;if(input.attackAction)cpu.attack(input.attackAction);}
+      const events=input.attackEvents?.length?input.attackEvents:[{sequence:input.attackSequence,action:input.attackAction}];
+      for(const event of events)if(event.sequence>network.remoteAttackSequence){network.remoteAttackSequence=event.sequence;if(!event.action||!cpu.queueAttack(event.action,event.sequence))cpu.lastResolvedAttackSequence=Math.max(cpu.lastResolvedAttackSequence,event.sequence);}
       if(network.pendingFinalSnapshot)network.pendingFinalSnapshot=null;
     }else acceptNetworkSnapshot(room.snapshot,room.snapshotSequence);
   }catch(error){network.consecutiveErrors+=1;networkIndicator(network.consecutiveErrors>3?'error':'reconnecting',network.consecutiveErrors>3?'CONNECTION INTERRUPTED':'RECONNECTING');}
@@ -673,7 +716,7 @@ function canConnect(attacker,target){
     return distance<=bodyContact+ATTACKS.shove.reach;
   }
   return canStrike(
-    {x:attacker.x,facing:attacker.facing,width:attacker.data.look.width,reach:attacker.data.reach},
+    {x:attacker.x,facing:attacker.facing,width:attacker.data.look.width,reach:attacker.data.reach,combo:attacker.comboSteps.length>1},
     {x:target.x,width:target.data.look.width},
     attacker.state
   );
@@ -689,15 +732,16 @@ function resolveCombat(){
 
 function hit(attacker, target, kind) {
   const frontBlock=target.blocking&&((attacker.x-target.x)*target.facing>0);
-  const defenseFactor=clamp(1.16-target.data.defense*.035,.81,1.08),rawDamage=attackDamage(attacker.data,kind,frontBlock),damage=rawDamage*defenseFactor*(attacker.isCpu?1+Math.max(0,attacker.difficulty-1)*.35:1),move=ATTACKS[kind];
+  const defenseFactor=clamp(1.16-target.data.defense*.035,.81,1.08),rawDamage=attackDamage(attacker.data,kind,frontBlock)*comboDamageScale(attacker.comboSteps.length),damage=rawDamage*defenseFactor*(attacker.isCpu?1+Math.max(0,attacker.difficulty-1)*.35:1),move=ATTACKS[kind];
   target.health=clamp(target.health-damage,0,target.maxHealth);attacker.meter=attacker.data.allowLegacy===false?0:clamp(attacker.meter+(kind==='special'?0:damage*2.1),0,100);target.meter=target.data.allowLegacy===false?0:clamp(target.meter+damage*1.15,0,100);
-  if(frontBlock){target.stamina=Math.max(0,target.stamina-damage*1.6);target.staminaDelay=.7;if(target.stamina===0){target.animationSequence+=1;target.blocking=false;target.state='hurt';target.stateTime=0;target.hurtDuration=.32;target.knockdown=false;target.hitDirection=attacker.facing;target.hitLean=.2;}}
-  target.flash=.13; target.vx=attacker.facing*move.knockback;
+  if(frontBlock){target.stamina=Math.max(0,target.stamina-damage*1.6);target.staminaDelay=.7;if(target.stamina===0){target.resetCombo();target.animationSequence+=1;target.blocking=false;target.state='hurt';target.stateTime=0;target.hurtDuration=.32;target.knockdown=false;target.hitDirection=attacker.facing;target.hitLean=.2;}}
+  if(frontBlock)attacker.resetCombo();else{attacker.comboConfirmed=true;const combo=completedCombo(attacker.comboSteps);if(combo){attacker.comboName=combo.name;attacker.comboHitCount=attacker.comboSteps.length;attacker.comboDisplayTime=1.1;}}
+  target.flash=.13; target.vx=attacker.facing*move.knockback*(comboPrefix(attacker.comboSteps)&&attacker.comboSteps.length<3&&!['double-kick','mixed-finish'].includes(completedCombo(attacker.comboSteps)?.id)? .4:1);
   const grappled=kind==='special'&&['groundSlam','bodySlam','suplex','takedown'].includes(attacker.data.legacy);
   if(grappled){target.throwType=attacker.data.legacy;target.throwTime=0;}
   if(!frontBlock){
     target.animationSequence+=1;target.blocking=false;target.state='hurt';target.stateTime=0;target.hitDone=true;
-    target.knockdown=shouldKnockdown(kind,attacker.data.power);target.knockdownDirection=attacker.facing;target.hitDirection=attacker.facing;
+    target.resetCombo();target.knockdown=(kind==='heavyKick'&&Boolean(completedCombo(attacker.comboSteps)))||shouldKnockdown(kind,attacker.data.power);target.knockdownDirection=attacker.facing;target.hitDirection=attacker.facing;
     target.hitLean=kind==='shove'?.24:kind==='heavyKick'?.34:kind==='cross'?.28:kind==='kick'?.22:.15;target.hurtDuration=target.knockdown?(target.health<=0?1.18:.92):grappled?.92:kind==='shove'?.3:kind==='heavyKick'?.4:kind==='cross'?.34:kind==='kick'?.3:.24;target.ragAngle=0;
   }
   shake=(kind==='special'?15:kind==='heavyKick'?10:kind==='cross'?7:kind==='shove'?5:4)*(settings.screenShake/100);
@@ -853,6 +897,7 @@ function drawParis(){
 }
 function drawHud(){
   const health=(f,x,flip)=>{ctx.fillStyle='rgba(8,6,16,.82)';ctx.fillRect(x,34,460,70);ctx.strokeStyle='rgba(255,255,255,.22)';ctx.strokeRect(x,34,460,70);const w=442*f.health/f.maxHealth;ctx.fillStyle=f.health/f.maxHealth<.3?'#ff3d5a':'#f3ede3';ctx.fillRect(flip?x+9+442-w:x+9,43,w,22);const sw=442*f.stamina/f.maxStamina;ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(x+9,71,442,8);ctx.fillStyle=f.stamina/f.maxStamina<.2?'#ff7a64':'#58e6be';ctx.fillRect(flip?x+9+442-sw:x+9,71,sw,8);const legacyEnabled=f.data.allowLegacy!==false,mw=legacyEnabled?442*f.meter/100:0;ctx.fillStyle='rgba(255,255,255,.08)';ctx.fillRect(x+9,85,442,7);ctx.fillStyle='#ffd23f';ctx.fillRect(flip?x+9+442-mw:x+9,85,mw,7);ctx.fillStyle='#fff';ctx.textAlign=flip?'right':'left';ctx.font='italic 800 25px Barlow Condensed';ctx.fillText(f.data.name.toUpperCase(),flip?x+451:x+9,126);ctx.fillStyle='#ffd23f';ctx.font='700 12px Inter';const status=legacyEnabled?(f.meter>=100?'LEGACY READY':f.data.move.toUpperCase()):`LEVEL ${f.data.careerLevel||1}`;ctx.fillText(status,flip?x+451:x+9,145);};health(player,44,false);health(cpu,776,true);
+  for(const [fighter,x] of [[player,80],[cpu,1200]])if(fighter.comboDisplayTime>0){ctx.textAlign=x<640?'left':'right';ctx.fillStyle=fighter.data.accent;ctx.font='italic 900 28px Barlow Condensed';ctx.fillText(fighter.comboName.toUpperCase(),x,192);ctx.fillStyle='#fff';ctx.font='700 12px Inter';ctx.fillText(`${fighter.comboHitCount} HIT COMBO`,x,211);}
   ctx.fillStyle='#0a0812';ctx.beginPath();ctx.arc(640,65,53,0,Math.PI*2);ctx.fill();ctx.strokeStyle='#ffd23f';ctx.lineWidth=4;ctx.stroke();ctx.fillStyle='#fff';ctx.font='italic 900 48px Barlow Condensed';ctx.textAlign='center';ctx.fillText(Math.ceil(timer).toString().padStart(2,'0'),640,80);ctx.lineWidth=1;
 }
 // Version 1.33 character renderer preserved intact for instant rollback.
@@ -898,7 +943,8 @@ function buildRigPose(f,t){
   const moving=f.state==='walk',motion=settings.fluidMotion,stride=motion&&moving?Math.sin(f.stepPhase):0,move=ATTACKS[f.state];
   const legacy=f.data.legacy,special=f.state==='special',kicker=['spinKick','roundhouse','counterKick'].includes(legacy),grappler=['groundSlam','bodySlam','suplex','takedown'].includes(legacy),puncher=['punchCombo','strikeFlurry','straightPunch','overhand'].includes(legacy);
   const specialProgress=special?clamp(f.stateTime/ATTACKS.special.duration,0,1):0;
-  let pulse=move?Math.sin(Math.min(1,f.stateTime/move.duration)*Math.PI):0;
+  const motionPhase=move?attackMotion(move,f.stateTime):{extension:0,windup:0,recovery:0};
+  let pulse=move?motionPhase.extension:0;
   if(special&&legacy==='punchCombo')pulse=Math.sin(Math.min(1,(specialProgress*3)%1)*Math.PI);
   if(special&&legacy==='strikeFlurry')pulse=Math.sin(Math.min(1,(specialProgress*6)%1)*Math.PI);
   if(special&&['straightPunch','overhand'].includes(legacy))pulse=Math.sin(clamp((specialProgress-.16)/.68,0,1)*Math.PI);
@@ -918,12 +964,26 @@ function buildRigPose(f,t){
     pose.backFoot.x-=stride*28;pose.backKnee.x-=stride*15;pose.backKnee.y+=Math.abs(stride)*5;
     pose.frontHand.x-=stride*13;pose.backHand.x+=stride*13;pose.hip.x=stride*2;
   }
-  if(f.state==='jab'){pose.frontElbow=rigPoint(50+pulse*50,-151);pose.frontHand=rigPoint(55+pulse*102,-151);pose.backHand=rigPoint(-7,-151);pose.chest.x=pulse*5;}
-  if(f.state==='cross'){pose.frontElbow=rigPoint(53+pulse*65,-145);pose.frontHand=rigPoint(57+pulse*123,-143);pose.backHand=rigPoint(-14,-153);pose.backShoulder.x=-35+pulse*9;pose.chest.x=pulse*9;}
+  if(f.state==='jab'||f.state==='cross'){
+    const power=f.state==='cross',rear=power||(f.comboSteps.length>1&&f.comboSteps.length%2===0);
+    const reach=power?150:116,wind=motionPhase.windup;
+    const hand=rigPoint(45+pulse*reach-wind*21,-153+(power?pulse*9:-pulse*3));
+    const elbow=rigPoint(44+pulse*(power?77:58)-wind*14,-142-pulse*10);
+    if(rear){pose.backHand=hand;pose.backElbow=elbow;pose.frontHand=rigPoint(26,-174);pose.frontElbow=rigPoint(43,-140);}
+    else{pose.frontHand=hand;pose.frontElbow=elbow;pose.backHand=rigPoint(-5,-170);pose.backElbow=rigPoint(-42,-143);}
+    pose.chest.x=pulse*(power?13:7)-wind*7;pose.hip.x=-wind*5+pulse*5;
+    pose.frontKnee.y+=pulse*5;pose.backFoot.x-=wind*5;pose.head.x=pulse*4-wind*3;
+  }
   if(f.state==='block'){pose.frontElbow=rigPoint(28,-147);pose.frontHand=rigPoint(49,-178);pose.backElbow=rigPoint(-9,-151);pose.backHand=rigPoint(34,-130);pose.frontKnee.y=-43;pose.backKnee.y=-43;}
   if(f.state==='shove'){pose.frontElbow=rigPoint(58+pulse*28,-130);pose.frontHand=rigPoint(72+pulse*72,-122);pose.backElbow=rigPoint(36+pulse*24,-149);pose.backHand=rigPoint(61+pulse*69,-140);pose.chest.x=pulse*10;pose.hip.x=-pulse*7;}
-  if(f.state==='kick'){pose.frontKnee=rigPoint(29+pulse*50,-40-pulse*31);pose.frontFoot=rigPoint(-7+pulse*137,-4-pulse*78);pose.hip.x=-pulse*7;pose.backKnee.x-=pulse*7;}
-  if(f.state==='heavyKick'){pose.frontKnee=rigPoint(29+pulse*60,-43-pulse*64);pose.frontFoot=rigPoint(-7+pulse*164,-4-pulse*134);pose.hip.x=-pulse*11;pose.chest.x=-pulse*8;pose.backKnee.x-=pulse*9;}
+  if(f.state==='kick'||f.state==='heavyKick'){
+    const heavy=f.state==='heavyKick',wind=motionPhase.windup;
+    pose.frontKnee=rigPoint(27+wind*12+pulse*(heavy?68:51),-43-wind*(heavy?60:38)-pulse*(heavy?53:26));
+    pose.frontFoot=rigPoint(-7+wind*28+pulse*(heavy?178:148),-4-wind*(heavy?64:40)-pulse*(heavy?139:72));
+    pose.hip.x=-pulse*(heavy?15:9);pose.chest.x=-pulse*(heavy?17:10);pose.head.x=-pulse*8;
+    pose.backKnee.x-=pulse*9;pose.backHand=rigPoint(-30-pulse*19,-164+pulse*10);
+    pose.frontHand=rigPoint(42-pulse*26,-168+pulse*13);pose.frontElbow=rigPoint(49,-135);
+  }
   if(special&&kicker){const chamber=clamp(specialProgress/.24,0,1),extension=clamp((specialProgress-.24)/.42,0,1);pose.frontKnee=rigPoint(36+chamber*45,-46-chamber*55);pose.frontFoot=rigPoint(3+extension*151,-18-extension*101);pose.chest.x=-pulse*13;pose.backHand.x-=pulse*32;}
   if(special&&puncher){const alternating=legacy==='strikeFlurry'||legacy==='punchCombo';pose.frontElbow=rigPoint(52+pulse*63,-142);pose.frontHand=rigPoint(63+pulse*(legacy==='straightPunch'?138:legacy==='overhand'?119:106),legacy==='overhand'?-165+pulse*58:-126);if(alternating){const backPulse=Math.sin(Math.min(1,((specialProgress+(legacy==='strikeFlurry'?.1:.18))*(legacy==='strikeFlurry'?6:3))%1)*Math.PI);pose.backElbow=rigPoint(20+backPulse*54,-144);pose.backHand=rigPoint(36+backPulse*104,-151);}pose.chest.x=pulse*11;}
   if(special&&grappler){
@@ -936,7 +996,7 @@ function buildRigPose(f,t){
   if(special&&legacy==='spinAttack'){pose.frontHand=rigPoint(77*pulse,-116);pose.backHand=rigPoint(-77*pulse,-116);pose.frontElbow=rigPoint(45*pulse,-145);pose.backElbow=rigPoint(-45*pulse,-145);}
   const breathing=motion&&!moving&&!f.isAttacking()&&f.state!=='hurt'?Math.sin(t*3.3+(f.isCpu?1.7:0))*1.5:0;
   pose.chest.y+=breathing;pose.neck.y+=breathing;pose.head.y+=breathing;
-  return {pose,pulse,special,legacy,moving,stride};
+  return {pose,pulse,special,legacy,moving,stride,motionPhase};
 }
 
 function rigSegment(a,b,startWidth,endWidth,fill,outline='rgba(12,8,18,.58)'){
@@ -972,24 +1032,29 @@ function drawRigTorso(data,pose){
 }
 
 function drawFighter(f,t=performance.now()/1000){
-  const {pose,pulse,special,legacy,moving,stride}=buildRigPose(f,t),look=f.data.look;
+  const {pose,pulse,special,legacy,moving,stride,motionPhase}=buildRigPose(f,t),look=f.data.look;
   const throwProgress=f.throwType?Math.min(1,f.throwTime/.92):0,throwArc=f.throwType?Math.sin(throwProgress*Math.PI):0,throwLift=f.throwType?throwArc*(f.throwType==='takedown'?70:130):0,fallAmount=f.knockdown?clamp(Math.abs(f.ragAngle)/1.36,0,1):0;
   const bob=settings.fluidMotion?(moving?Math.abs(stride)*3.5:0):0;
   ctx.save();ctx.translate(f.x,f.y);ctx.fillStyle='rgba(0,0,0,.38)';ctx.beginPath();ctx.ellipse(f.knockdownDirection*fallAmount*72,15,64+fallAmount*72,15+fallAmount*3,0,0,Math.PI*2);ctx.fill();
   ctx.translate(f.throwType?f.facing*Math.sin(throwProgress*Math.PI)*42:0,bob-throwLift);if(f.throwType)ctx.rotate(f.facing*throwArc*(f.throwType==='suplex'?2.25:f.throwType==='bodySlam'?1.45:.92));if(f.ragAngle)ctx.rotate(f.ragAngle);ctx.scale(f.facing*look.width,look.height);
   if(f.flash>0){ctx.globalCompositeOperation='screen';}
-  let lean=f.state==='block'?-.07:special&&legacy==='shoulderCharge'?.3:special&&['groundSlam','bodySlam','suplex','takedown'].includes(legacy)?.18:f.state==='cross'?.07:f.state==='heavyKick'?.11:moving?clamp(f.vx/1700,-.08,.08):0;if(special&&legacy==='spinAttack')lean+=Math.sin(f.stateTime*18)*.16;if(special&&['spinKick','roundhouse','counterKick'].includes(legacy))lean-=Math.sin(clamp(f.stateTime/ATTACKS.special.duration,0,1)*Math.PI)*.18;ctx.rotate(lean);
+  let lean=f.state==='block'?-.07:special&&legacy==='shoulderCharge'?.3:special&&['groundSlam','bodySlam','suplex','takedown'].includes(legacy)?.18:f.state==='cross'?.07:f.state==='heavyKick'?.11:moving?clamp(f.vx/1700,-.08,.08):0;if(!special&&ATTACKS[f.state])lean+=pulse*(f.state==='heavyKick'?-.13:f.state==='kick'?-.07:f.state==='cross'?.10:.04)-motionPhase.windup*.07;if(special&&legacy==='spinAttack')lean+=Math.sin(f.stateTime*18)*.16;if(special&&['spinKick','roundhouse','counterKick'].includes(legacy))lean-=Math.sin(clamp(f.stateTime/ATTACKS.special.duration,0,1)*Math.PI)*.18;ctx.rotate(lean);
   const skin=f.data.skin,backSkin=skin;
   drawRigChain(pose.backHip,pose.backKnee,pose.backFoot,28,24,16,backSkin);drawRigFoot(f.data,pose.backFoot);
   drawRigChain(pose.backShoulder,pose.backElbow,pose.backHand,25,20,14,backSkin);drawRigHand(f.data,pose.backHand);
-  rigSegment(rigPoint(-7,-187),rigPoint(-5,-174),24,29,skin);drawRigTorso(f.data,pose);
+  rigSegment(rigPoint(-7,-187),rigPoint(-5,-174),24,29,skin);ctx.save();ctx.translate(pose.chest.x*.35,pose.chest.y+154);ctx.rotate(pose.chest.x*.002);drawRigTorso(f.data,pose);ctx.restore();
   drawRigChain(pose.frontHip,pose.frontKnee,pose.frontFoot,31,25,17,skin);drawRigFoot(f.data,pose.frontFoot,true);
   drawRigChain(pose.frontShoulder,pose.frontElbow,pose.frontHand,27,21,14,skin);drawRigHand(f.data,pose.frontHand);
   if(['wristbands','bands','armbands'].includes(f.data.look.gear)){ctx.strokeStyle=f.data.accent;ctx.lineWidth=7;ctx.beginPath();ctx.arc(pose.frontHand.x,pose.frontHand.y,14,0,Math.PI*2);ctx.stroke();}
   if(f.data.look.gear==='longsocks'||f.data.look.gear==='anklewraps')drawLegGear(f.data,pose.frontFoot.x,pose.frontFoot.y,pose.backFoot.x,pose.backFoot.y,f.state==='kick'||f.state==='heavyKick');
+  ctx.save();ctx.translate(pose.head.x,pose.head.y+218);
   const headGradient=ctx.createLinearGradient(-30,-252,28,-181);headGradient.addColorStop(0,'rgba(255,255,255,.16)');headGradient.addColorStop(.28,skin);headGradient.addColorStop(1,skin);ctx.fillStyle='rgba(12,8,18,.62)';ctx.beginPath();ctx.ellipse(0,-218,40,43,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=headGradient;ctx.beginPath();ctx.moveTo(-35,-233);ctx.quadraticCurveTo(-42,-211,-29,-191);ctx.quadraticCurveTo(-16,-176,0,-174);ctx.quadraticCurveTo(17,-176,29,-191);ctx.quadraticCurveTo(42,-211,35,-233);ctx.quadraticCurveTo(20,-256,0,-258);ctx.quadraticCurveTo(-21,-256,-35,-233);ctx.closePath();ctx.fill();
   ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(-38,-215,7,12,0,0,Math.PI*2);ctx.ellipse(38,-215,7,12,0,0,Math.PI*2);ctx.fill();
-  drawHair(f.data);drawBeard(f.data);drawHeadAccessory(f.data);
+  drawHair(f.data);drawBeard(f.data);drawHeadAccessory(f.data);ctx.restore();
+  if(!special&&f.isAttacking()&&pulse>.4){
+    const kicking=f.state==='kick'||f.state==='heavyKick',rear=f.state==='cross'||(f.state==='jab'&&f.comboSteps.length>1&&f.comboSteps.length%2===0),end=kicking?pose.frontFoot:rear?pose.backHand:pose.frontHand;
+    ctx.save();ctx.globalAlpha=.22*pulse;ctx.strokeStyle=f.data.accent;ctx.lineWidth=kicking?5:3;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(end.x-44,end.y+(kicking?28:10));ctx.quadraticCurveTo(end.x-20,end.y-9,end.x,end.y);ctx.stroke();ctx.restore();
+  }
   if(f.state==='block'){ctx.strokeStyle='#ffd23f';ctx.lineWidth=7;ctx.globalAlpha=.62;ctx.beginPath();ctx.arc(42,-147,70,-1.32,1.3);ctx.stroke();}
   if(special)drawLegacyEffect(f,legacy,f.stateTime,t,pose.frontHand.x,pose.frontHand.y);
   ctx.restore();

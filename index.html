@@ -13,14 +13,14 @@
   <div id="introGate" class="intro-gate" role="dialog" aria-modal="true" aria-label="Enter Legacy Fighters">
     <div class="intro-orbit" aria-hidden="true"><i></i><i></i><i></i></div>
     <div class="intro-prompt">
-      <img class="game-title-logo intro-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="Legacy Fighters" />
+      <img class="game-title-logo intro-logo" src="assets/legacy-fighters-logo.png?v=1.9.0" alt="Legacy Fighters" />
       <button id="enterGameBtn" class="intro-enter">CLICK TO ENTER</button>
     </div>
   </div>
 
   <main id="gameShell" class="shell intro-hidden">
     <header class="topbar">
-      <button id="homeBtn" class="brand home-brand" aria-label="Return to main menu"><img class="header-brand-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="Legacy Fighters" /></button>
+      <button id="homeBtn" class="brand home-brand" aria-label="Return to main menu"><img class="header-brand-logo" src="assets/legacy-fighters-logo.png?v=1.9.0" alt="Legacy Fighters" /></button>
       <div class="top-actions">
         <button id="soundBtn" class="icon-btn" aria-label="Toggle sound">SOUND ON</button>
         <button id="howBtn" class="icon-btn">CONTROLS</button>
@@ -29,9 +29,9 @@
     </header>
 
     <section id="startScreen" class="start-screen" aria-labelledby="gameTitle">
-      <img class="game-title-logo start-logo" src="assets/legacy-fighters-logo.png?v=1.81.0" alt="" aria-hidden="true" />
+      <img class="game-title-logo start-logo" src="assets/legacy-fighters-logo.png?v=1.9.0" alt="" aria-hidden="true" />
       <h1 id="gameTitle" class="sr-only">LEGACY FIGHTERS</h1>
-      <p class="start-version">VERSION 1.81</p>
+      <p class="start-version">VERSION 1.9</p>
       <div class="start-actions">
         <button id="playBtn" class="fight-btn">PLAY</button>
         <button id="settingsBtn" class="secondary-btn">SETTINGS</button>
@@ -257,6 +257,8 @@
     <p class="eyebrow">HOW TO FIGHT</p>
     <h2>CONTROL THE ARENA</h2>
     <div id="controlGrid" class="control-grid"></div>
+    <h3>COMBOS</h3><p>Tap attacks in order, up to 350 ms apart. Connect each strike to continue. Blocking or missing breaks the chain.</p>
+    <div id="comboGuide" class="control-grid"></div>
   </dialog>
 
   <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle">
@@ -321,6 +323,14 @@
     <h2 id="updatesTitle">UPDATE LOG</h2>
     <div class="update-list">
       <article class="update-entry current">
+        <div><span>VERSION 1.9</span></div><h3>COMBO FLOW</h3>
+        <ul>
+          <li>Chain five new punch and kick combos using your existing attack keys.</li>
+          <li>Moves now have stronger windups, sharper strikes, guarded follow-through, and smoother recovery.</li>
+          <li>Finish combos for extra pressure or a knockdown kick. Watch your stamina—blocks and misses break the chain.</li>
+        </ul>
+      </article>
+      <article class="update-entry">
         <div><span>VERSION 1.81</span></div>
         <h3>PLAY ONLINE FROM YOUR LINK</h3>
         <ul>
@@ -489,8 +499,8 @@
     </div>
   </dialog>
 
-  <audio id="titleMusic" preload="auto" src="assets/audio/title-theme.mp3?v=1.81.0"></audio>
-  <script src="multiplayer-config.js?v=1.81.0"></script>
-  <script type="module" src="game.js?v=1.81.3"></script>
+  <audio id="titleMusic" preload="auto" src="assets/audio/title-theme.mp3?v=1.9.0"></audio>
+  <script src="multiplayer-config.js?v=1.9.0"></script>
+  <script type="module" src="game.js?v=1.9.0"></script>
 </body>
 </html>

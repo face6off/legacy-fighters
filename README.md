@@ -4,7 +4,7 @@ Legacy Fighters is an original browser fighting game with arcade combat, career 
 
 ## Current version
 
-Version 1.81 connects the source and downloadable editions to the shared online arena. Version 1.8 adds a standalone Cloudflare multiplayer service for static-hosted editions.
+Version 1.9 adds five buffered punch/kick combos and improved combat animation. Multiplayer uses the shared Cloudflare arena.
 
 ## Run locally
 
@@ -18,13 +18,17 @@ Then open `http://localhost:8080`.
 
 The browser-only modes run from the static files. Online multiplayer requires the separately deployed Cloudflare Worker described below. Downloading the HTML alone does not include its JavaScript, artwork, or audio; preserve the static edition's full folder.
 
+## Combos
+
+Tap F → G (One-Two), F → F → G (Triple Strike), J → F → G (Low-High), J → K (Double Kick), or F → G → K (Mixed Finish). Tap within 350 ms between inputs. Follow-ups require an unblocked hit; missed attacks leave recovery openings. Later strikes cost more stamina and scale damage down. The Controls menu reflects remapped keys; touch attack buttons use the same sequences.
+
 ## Multiplayer development
 
 Use Node.js 24 and Python 3. Install the pinned tools with `npm ci`, then run `npm run dev:api` and `npm run dev` in separate terminals. For local testing, override `multiplayerApiUrl` in the browser or an untracked static copy to `http://127.0.0.1:8787` for local play. Both browsers must use the same API URL. The tracked configuration uses the public Worker URL; the release workflow generates the configured file in its static artifact.
 
 Run `npm test` to exercise the real Cloudflare local runtime: room lifecycle, concurrent joins, role/token authorization, CORS, input/snapshot synchronization, stale requests, rematches, room isolation and request validation. `npm run check:worker` builds the deployment bundle without publishing it.
 
-With both servers running, `npm run test:browser` exercises two-player gameplay, browser reload recovery, completed-match recovery, rematches, and classic pause/resume. Install Chromium with `npx playwright install chromium`, or set `CHROMIUM_PATH` to an installed Chromium binary (in this cloud environment, `/usr/bin/chromium`). This test injects the local API URL without editing your client configuration.
+With both servers running, `npm run test:browser` exercises two-player gameplay, browser reload recovery, completed-match recovery, rematches, and classic pause/resume. Install Chromium with `npx playwright install chromium`, or set `CHROMIUM_PATH` to an installed Chromium binary (in this cloud environment, `/usr/bin/chromium`). This test injects the local API URL without editing your client configuration and validates a buffered combo with delayed guest updates. `npm run test:combos` exercises all five combos, blocks, misses, low stamina, and input timing against the real combat code.
 
 ## Deploy to Cloudflare and GitHub Pages
 

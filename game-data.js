@@ -72,7 +72,7 @@ export function canStrike(attacker, target, kind) {
   const attackerBody = 38 * attacker.width;
   const targetBody = 38 * target.width;
   const bodyGap = forwardDistance - attackerBody - targetBody;
-  if (move.minGap && bodyGap < move.minGap) return false;
+  if (move.minGap && !attacker.combo && bodyGap < move.minGap) return false;
   return forwardDistance <= attackerBody + targetBody + move.reach + attacker.reach * 4 + 0.01;
 }
 
